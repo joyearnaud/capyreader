@@ -21,6 +21,11 @@ kotlinx.serialization (no Retrofit — one endpoint), Jsoup 1.22.1, SQLDelight 2
 **Spec:** `docs/superpowers/specs/2026-09-13-capyreader-ai-summary-design.md` — the plan argues
 from the spec; read both.
 
+**Execution order:** Tasks 1 → 4 in numerical order, then **Task 7 before Task 5's device step**
+(Task 5 Step 11 needs a way to enter the API key, and Task 7 is the settings panel that provides
+it), then Task 6 and Task 8. Everything else is incremental: each task ends with a passing test or
+a build, and each task's commit stands on its own.
+
 ## Global Constraints
 
 - Build always with the `free` flavor: `assembleFreeDebug`. `gplay` is the default flavor and
@@ -1256,6 +1261,12 @@ Run: `mise exec java@zulu-21.34.19.0 -- ./gradlew -Dorg.gradle.jvmargs="-Xmx4g -
 Expected: `BUILD SUCCESSFUL`.
 
 - [ ] **Step 11: Install on the phone and summarize one real article**
+
+**Prerequisite: Task 7 must already be done.** This step needs an API key inside the app, and the
+settings panel that accepts one arrives in Task 7. Either run Task 7 first, or write the key
+directly for a one-off check with
+`"$ADB" shell run-as com.capyreader.app.debug cat shared_prefs/*.xml` to confirm where it lives —
+but do not ship the feature without the panel.
 
 ```bash
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
