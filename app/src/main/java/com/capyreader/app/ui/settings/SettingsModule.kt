@@ -2,6 +2,7 @@ package com.capyreader.app.ui.settings
 
 import com.capyreader.app.transfers.OPMLImportWorker
 import com.capyreader.app.ui.settings.panels.AccountSettingsViewModel
+import com.capyreader.app.ui.settings.panels.AiSettingsViewModel
 import com.capyreader.app.ui.settings.panels.DisplaySettingsViewModel
 import com.capyreader.app.ui.settings.panels.GeneralSettingsViewModel
 import com.capyreader.app.ui.settings.panels.GesturesSettingsViewModel
@@ -24,6 +25,11 @@ val settingsModule = module {
             accountManager = get(),
             appPreferences = get(),
             application = get()
+        )
+    }
+    viewModel {
+        AiSettingsViewModel(
+            appPreferences = get(),
         )
     }
     viewModel {

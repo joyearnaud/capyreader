@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Info
@@ -20,6 +21,11 @@ sealed class SettingsPanel(@StringRes val title: Int) {
     @Parcelize
     data object General : SettingsPanel(title = R.string.settings_panel_general_title), Parcelable {
         override fun icon() = Icons.Rounded.Build
+    }
+
+    @Parcelize
+    data object Ai : SettingsPanel(title = R.string.settings_panel_ai_title), Parcelable {
+        override fun icon() = Icons.Rounded.AutoAwesome
     }
 
     @Parcelize
@@ -66,6 +72,7 @@ sealed class SettingsPanel(@StringRes val title: Int) {
         val items: List<SettingsPanel>
             get() = listOf(
                 General,
+                Ai,
                 Display,
                 Gestures,
                 Account,

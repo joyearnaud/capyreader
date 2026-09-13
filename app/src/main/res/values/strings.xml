@@ -365,4 +365,13 @@
     <string name="article_actions_delete_page_title">Delete</string>
     <string name="article_actions_delete_page_message">Are you sure you want to delete this page?</string>
     <string name="article_actions_delete_page_confirm">Delete</string>
+
+    <string name="settings_panel_ai_title">AI</string>
+    <string name="settings_section_ai_provider">AI provider</string>
+    <string name="settings_section_ai_prompt">Summary prompt</string>
+    <string name="settings_ai_base_url">API endpoint</string>
+    <string name="settings_ai_model">Model</string>
+    <string name="settings_ai_api_key">API key</string>
+    <string name="settings_ai_api_key_subtitle">Stored on this device only</string>
+    <string name="settings_ai_prompt">Prompt</string>
 </resources>
