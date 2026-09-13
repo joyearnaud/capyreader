@@ -40,7 +40,7 @@ fun rememberSummary(
     appPreferences: AppPreferences = koinInject(),
 ): SummaryController {
     val scope = rememberCoroutineScope()
-    var state by remember { mutableStateOf(SummaryUiState()) }
+    var state by remember(article?.id) { mutableStateOf(SummaryUiState()) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
     val canSummarize = article != null &&
