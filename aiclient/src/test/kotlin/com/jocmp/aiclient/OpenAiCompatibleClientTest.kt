@@ -97,6 +97,18 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
+    fun `fails when content is blank`() = runTest {
+        server.enqueue(
+            MockResponse(body = """{"choices":[{"message":{"content":"   "}}]}""")
+        )
+
+        val result = client({ config.copy(baseURL = baseURL()) }).summarize(request())
+
+        assertTrue(result.isFailure, result.toString())
+        assertTrue(result.exceptionOrNull() is SummaryException)
+    }
+
+    @Test
     fun `surfaces the provider error message on 401`() = runTest {
         server.enqueue(
             MockResponse(
@@ -131,6 +143,16 @@ class OpenAiCompatibleClientTest {
         }).summarize(request())
 
         assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `fails instead of throwing when the base url has no scheme`() = runTest {
+        val result = client({
+            config.copy(baseURL = "api.deepseek.com/v1")
+        }).summarize(request())
+
+        assertTrue(result.isFailure, result.toString())
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
     }
 
     @Test

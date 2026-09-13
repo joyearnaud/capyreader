@@ -76,14 +76,16 @@ class OpenAiCompatibleClient(
             )
         )
 
-        val httpRequest = Request.Builder()
-            .url(provider.baseURL.trimEnd('/') + "/chat/completions")
-            .header("Authorization", "Bearer ${provider.apiKey}")
-            .post(body.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
-
         return withContext(Dispatchers.IO) {
             runCatching {
+                // Built inside runCatching: url() rejects a scheme-less or empty baseURL with an
+                // IllegalArgumentException, and the contract is to fail the Result, not to throw.
+                val httpRequest = Request.Builder()
+                    .url(provider.baseURL.trimEnd('/') + "/chat/completions")
+                    .header("Authorization", "Bearer ${provider.apiKey}")
+                    .post(body.toRequestBody(JSON_MEDIA_TYPE))
+                    .build()
+
                 httpClient.newCall(httpRequest).execute().use { response ->
                     val text = response.body.string()
                     if (!response.isSuccessful) throw summaryError(response.code, text)
