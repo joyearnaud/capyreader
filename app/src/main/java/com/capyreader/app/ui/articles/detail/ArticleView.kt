@@ -2,6 +2,7 @@ package com.capyreader.app.ui.articles.detail
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -41,6 +42,8 @@ import com.capyreader.app.preferences.ArticleVerticalSwipe.OPEN_ARTICLE_IN_BROWS
 import com.capyreader.app.preferences.ArticleVerticalSwipe.PREVIOUS_ARTICLE
 import com.capyreader.app.ui.LocalLinkOpener
 import com.capyreader.app.ui.articles.LocalFullContent
+import com.capyreader.app.ui.articles.summary.LocalSummary
+import com.capyreader.app.ui.articles.summary.SummaryCard
 import com.capyreader.app.ui.collectChangesWithDefault
 import com.capyreader.app.ui.components.pullrefresh.SwipeRefresh
 import com.capyreader.app.ui.components.LocalSnackbarHost
@@ -164,15 +167,23 @@ fun ArticleView(
                             previousArticleId = previousArticleId,
                             nextArticleId = nextArticleId,
                         ) { targetArticle ->
-                            ArticleReader(
-                                article = targetArticle,
-                                pinToolbars = pinToolbars,
-                                onSelectMedia = onSelectMedia,
-                                onSelectAudio = onSelectAudio,
-                                onPauseAudio = onPauseAudio,
-                                currentAudioUrl = currentAudioUrl,
-                                isAudioPlaying = isAudioPlaying,
-                            )
+                            Column(Modifier.fillMaxSize()) {
+                                SummaryCard(
+                                    summary = LocalSummary.current,
+                                )
+
+                                Box(Modifier.weight(1f)) {
+                                    ArticleReader(
+                                        article = targetArticle,
+                                        pinToolbars = pinToolbars,
+                                        onSelectMedia = onSelectMedia,
+                                        onSelectAudio = onSelectAudio,
+                                        onPauseAudio = onPauseAudio,
+                                        currentAudioUrl = currentAudioUrl,
+                                        isAudioPlaying = isAudioPlaying,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

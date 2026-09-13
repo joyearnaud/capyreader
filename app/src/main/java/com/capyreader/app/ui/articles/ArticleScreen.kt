@@ -81,6 +81,8 @@ import com.capyreader.app.ui.articles.list.MarkAllReadDialog
 import com.capyreader.app.ui.articles.list.SwipeUpActionBox
 import com.capyreader.app.ui.articles.list.resetScrollBehaviorListener
 import com.capyreader.app.ui.articles.media.ArticleMediaView
+import com.capyreader.app.ui.articles.summary.LocalSummary
+import com.capyreader.app.ui.articles.summary.rememberSummary
 import com.capyreader.app.ui.collectChangesWithCurrent
 import com.capyreader.app.ui.collectChangesWithDefault
 import com.capyreader.app.ui.components.ArticleSearch
@@ -174,6 +176,7 @@ fun ArticleScreen(
     }
 
     val article = viewModel.article
+    val summary = rememberSummary(article)
 
     val search = ArticleSearch(
         query = searchQuery,
@@ -190,6 +193,7 @@ fun ArticleScreen(
 
     CompositionLocalProvider(
         LocalFullContent provides fullContent,
+        LocalSummary provides summary,
         LocalArticleActions provides articleActions,
         LocalFolderActions provides folderActions,
         LocalFeedActions provides feedActions,

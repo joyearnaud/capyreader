@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FiberManualRecord
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.Share
@@ -37,6 +38,7 @@ import androidx.compose.ui.zIndex
 import com.capyreader.app.R
 import com.capyreader.app.common.shareArticle
 import com.capyreader.app.ui.articles.FullContentLoadingIcon
+import com.capyreader.app.ui.articles.summary.LocalSummary
 import com.capyreader.app.ui.components.ToolbarTooltip
 import com.jocmp.capy.Article
 import com.jocmp.capy.Article.FullContentState.LOADED
@@ -56,6 +58,7 @@ fun ArticleBottomBar(
     onSelectNext: () -> Unit,
 ) {
     val context = LocalContext.current
+    val summary = LocalSummary.current
 
     Box(
         modifier = Modifier
@@ -114,6 +117,21 @@ fun ArticleBottomBar(
                         Icon(
                             Icons.Rounded.ExpandMore,
                             contentDescription = stringResource(R.string.article_bottom_bar_next_article),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                ToolbarTooltip(
+                    positioning = TooltipAnchorPosition.Above,
+                    message = stringResource(R.string.summary_action)
+                ) {
+                    IconButton(
+                        enabled = summary.isConfigured && !summary.state.isVisible,
+                        onClick = { summary.summarize() },
+                    ) {
+                        Icon(
+                            Icons.Rounded.AutoAwesome,
+                            contentDescription = stringResource(R.string.summary_action),
                             modifier = Modifier.size(24.dp)
                         )
                     }

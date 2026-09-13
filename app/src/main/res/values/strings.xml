@@ -374,4 +374,10 @@
     <string name="settings_ai_api_key">API key</string>
     <string name="settings_ai_api_key_subtitle">Stored on this device only</string>
     <string name="settings_ai_prompt">Prompt</string>
+
+    <string name="summary_action">Summarize</string>
+    <string name="summary_card_title">AI summary</string>
+    <string name="summary_card_truncated">Summary based on the beginning of the article</string>
+    <string name="summary_card_resummarize">Re-summarize</string>
+    <string name="summary_card_dismiss">Hide</string>
 </resources>
