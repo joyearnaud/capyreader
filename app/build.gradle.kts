@@ -167,6 +167,7 @@ dependencies {
     implementation(libs.zoomable)
     implementation(libs.zoomable.image.coil)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(project(":aiclient"))
     implementation(project(":capy"))
     implementation(project(":feedfinder"))
     implementation(libs.androidx.glance.appwidget)
