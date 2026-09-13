@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Capy Reader"
+include(":aiclient")
 include(":app")
 include(":feedbinclient")
 include(":feedfinder")
