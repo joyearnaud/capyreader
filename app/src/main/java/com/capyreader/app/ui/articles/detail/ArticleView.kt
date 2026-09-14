@@ -170,6 +170,9 @@ fun ArticleView(
                             Column(Modifier.fillMaxSize()) {
                                 SummaryCard(
                                     summary = LocalSummary.current,
+                                    modifier = Modifier.padding(
+                                        top = if (pinToolbars) 0.dp else ArticleBarDefaults.topBarOffset
+                                    ),
                                 )
 
                                 Box(Modifier.weight(1f)) {
