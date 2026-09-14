@@ -167,26 +167,16 @@ fun ArticleView(
                             previousArticleId = previousArticleId,
                             nextArticleId = nextArticleId,
                         ) { targetArticle ->
-                            Column(Modifier.fillMaxSize()) {
-                                SummaryCard(
-                                    summary = LocalSummary.current,
-                                    modifier = Modifier.padding(
-                                        top = if (pinToolbars) 0.dp else ArticleBarDefaults.topBarOffset
-                                    ),
-                                )
-
-                                Box(Modifier.weight(1f)) {
-                                    ArticleReader(
-                                        article = targetArticle,
-                                        pinToolbars = pinToolbars,
-                                        onSelectMedia = onSelectMedia,
-                                        onSelectAudio = onSelectAudio,
-                                        onPauseAudio = onPauseAudio,
-                                        currentAudioUrl = currentAudioUrl,
-                                        isAudioPlaying = isAudioPlaying,
-                                    )
-                                }
-                            }
+                            ArticleReader(
+                                article = targetArticle,
+                                pinToolbars = pinToolbars,
+                                header = { SummaryCard(summary = LocalSummary.current) },
+                                onSelectMedia = onSelectMedia,
+                                onSelectAudio = onSelectAudio,
+                                onPauseAudio = onPauseAudio,
+                                currentAudioUrl = currentAudioUrl,
+                                isAudioPlaying = isAudioPlaying,
+                            )
                         }
                     }
                 }

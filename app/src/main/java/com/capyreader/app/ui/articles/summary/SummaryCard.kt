@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.capyreader.app.R
+import com.mikepenz.markdown.m3.Markdown
 
 @Composable
 fun SummaryCard(
@@ -33,7 +32,6 @@ fun SummaryCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(max = 460.dp)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -49,13 +47,7 @@ fun SummaryCard(
             }
 
             state.text?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .verticalScroll(rememberScrollState()),
-                )
+                Markdown(it)
             }
 
             state.error?.let {
