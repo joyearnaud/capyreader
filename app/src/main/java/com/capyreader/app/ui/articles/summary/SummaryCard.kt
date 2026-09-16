@@ -67,6 +67,13 @@ fun SummaryCard(
                 )
             }
 
+            state.streamTail?.takeIf { it.isNotBlank() }?.let { tail ->
+                Text(
+                    text = stripStreamTailMarkers(tail),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+
             state.error?.let {
                 Text(
                     text = it,

@@ -23,6 +23,7 @@ val LocalSummary = compositionLocalOf { SummaryController() }
 
 data class SummaryUiState(
     val text: String? = null,
+    val streamTail: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isTruncated: Boolean = false,
@@ -94,27 +95,32 @@ fun rememberSummary(
                     }
                 }
 
-                try {
-                    var last: String? = null
-                    var lastRenderNanos = 0L
-                    summaryClient.summarizeStreaming(request).collect { cumulative ->
-                        last = cumulative
-                        val now = System.nanoTime()
-                        if (now - lastRenderNanos >= RENDER_INTERVAL_NANOS) {
-                            lastRenderNanos = now
-                            holder.state = SummaryUiState(text = cumulative, isTruncated = truncated)
-                        }
-                    }
-                    last?.let {
-                        holder.state = SummaryUiState(text = it, isTruncated = truncated)
-                        account.upsertSummary(
-                            articleID = target.id,
-                            providerKey = providerKey,
-                            promptHash = hash,
-                            content = it,
+            try {
+                var last: String? = null
+                var lastRenderNanos = 0L
+                summaryClient.summarizeStreaming(request).collect { cumulative ->
+                    last = cumulative
+                    val now = System.nanoTime()
+                    if (now - lastRenderNanos >= RENDER_INTERVAL_NANOS) {
+                        lastRenderNanos = now
+                        val (stable, tail) = splitStreamText(cumulative)
+                        holder.state = SummaryUiState(
+                            text = stable,
+                            streamTail = tail.ifBlank { null },
+                            isTruncated = truncated,
                         )
                     }
-                } catch (e: CancellationException) {
+                }
+                last?.let {
+                    holder.state = SummaryUiState(text = it, isTruncated = truncated)
+                    account.upsertSummary(
+                        articleID = target.id,
+                        providerKey = providerKey,
+                        promptHash = hash,
+                        content = it,
+                    )
+                }
+            } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     holder.state = SummaryUiState(error = e.message ?: "Summary failed")
@@ -134,7 +140,30 @@ fun rememberSummary(
     )
 }
 
-private const val RENDER_INTERVAL_NANOS = 120L * 1_000_000
+private const val RENDER_INTERVAL_NANOS = 60L * 1_000_000
+
+/**
+ * Complete blocks vs the block still being written: markdown syntax only
+ * closes once per block, so rendering the stable prefix through the markdown
+ * renderer never reflows already-shown text.
+ */
+fun splitStreamText(cumulative: String): Pair<String, String> {
+    val normalized = cumulative.replace("\r\n", "\n")
+    val index = normalized.lastIndexOf("\n\n")
+
+    return if (index == -1) {
+        "" to normalized
+    } else {
+        normalized.substring(0, index) to normalized.substring(index + 2)
+    }
+}
+
+/** Cheap marker removal for the plain-text tail: inline markers anywhere,
+ *  line-start markers at line starts only. Worst case is one stray marker
+ *  for a single render tick. */
+fun stripStreamTailMarkers(tail: String): String =
+    tail.replace(Regex("[*`|]"), "")
+        .replace(Regex("(?m)^[#>]+\\s*"), "")
 
 private fun promptHash(prompt: String): String =
     MessageDigest.getInstance("SHA-256")
