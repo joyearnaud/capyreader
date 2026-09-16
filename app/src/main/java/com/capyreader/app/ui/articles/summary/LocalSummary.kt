@@ -30,12 +30,21 @@ data class SummaryUiState(
     val isVisible: Boolean get() = isLoading || text != null || error != null
 }
 
+class SummaryStateHolder {
+    var state by mutableStateOf(SummaryUiState())
+}
+
 class SummaryController(
-    val state: SummaryUiState = SummaryUiState(),
+    private val holder: SummaryStateHolder = SummaryStateHolder(),
     val isConfigured: Boolean = false,
     val summarize: (forceRefresh: Boolean) -> Unit = {},
     val dismiss: () -> Unit = {},
-)
+) {
+    // Stable identity: state lives in the holder, so streaming writes only
+    // recompose the scopes that actually read it (the card), not every
+    // SummaryController consumer.
+    val state: SummaryUiState get() = holder.state
+}
 
 @Composable
 fun rememberSummary(
@@ -45,7 +54,7 @@ fun rememberSummary(
     account: Account = koinInject(),
 ): SummaryController {
     val scope = rememberCoroutineScope()
-    var state by remember(article?.id) { mutableStateOf(SummaryUiState()) }
+    val holder = remember(article?.id) { SummaryStateHolder() }
     var activeJob by remember { mutableStateOf<Job?>(null) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
@@ -70,7 +79,7 @@ fun rememberSummary(
 
             activeJob?.cancel()
             activeJob = scope.launch {
-                state = SummaryUiState(isLoading = true)
+                holder.state = SummaryUiState(isLoading = true)
 
                 if (!forceRefresh) {
                     val cached = account.findSummary(
@@ -80,18 +89,24 @@ fun rememberSummary(
                     )
 
                     if (cached != null) {
-                        state = SummaryUiState(text = cached.content, isTruncated = truncated)
+                        holder.state = SummaryUiState(text = cached.content, isTruncated = truncated)
                         return@launch
                     }
                 }
 
                 try {
                     var last: String? = null
+                    var lastRenderNanos = 0L
                     summaryClient.summarizeStreaming(request).collect { cumulative ->
                         last = cumulative
-                        state = SummaryUiState(text = cumulative, isTruncated = truncated)
+                        val now = System.nanoTime()
+                        if (now - lastRenderNanos >= RENDER_INTERVAL_NANOS) {
+                            lastRenderNanos = now
+                            holder.state = SummaryUiState(text = cumulative, isTruncated = truncated)
+                        }
                     }
                     last?.let {
+                        holder.state = SummaryUiState(text = it, isTruncated = truncated)
                         account.upsertSummary(
                             articleID = target.id,
                             providerKey = providerKey,
@@ -102,22 +117,24 @@ fun rememberSummary(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    state = SummaryUiState(error = e.message ?: "Summary failed")
+                    holder.state = SummaryUiState(error = e.message ?: "Summary failed")
                 }
             }
         }
     }
 
     return SummaryController(
-        state = state,
+        holder = holder,
         isConfigured = canSummarize,
         summarize = run,
         dismiss = {
             activeJob?.cancel()
-            state = SummaryUiState()
+            holder.state = SummaryUiState()
         },
     )
 }
+
+private const val RENDER_INTERVAL_NANOS = 120L * 1_000_000
 
 private fun promptHash(prompt: String): String =
     MessageDigest.getInstance("SHA-256")
