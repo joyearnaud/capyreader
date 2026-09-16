@@ -56,13 +56,13 @@ class StreamTextTest {
 class AdvanceDisplayedTest {
 
     @Test
-    fun `catches up by a third of the backlog`() {
-        assertEquals(10, advanceDisplayed(0, 30))
+    fun `catches up by a fifth of the backlog`() {
+        assertEquals(6, advanceDisplayed(0, 30))
     }
 
     @Test
     fun `caps the per-frame step`() {
-        assertEquals(20, advanceDisplayed(0, 1000))
+        assertEquals(6, advanceDisplayed(0, 1000))
     }
 
     @Test

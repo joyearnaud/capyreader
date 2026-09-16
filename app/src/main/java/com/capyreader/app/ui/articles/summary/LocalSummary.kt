@@ -168,8 +168,8 @@ fun rememberSummary(
     )
 }
 
-private const val CATCHUP_FRAMES = 3
-private const val MAX_CHARS_PER_FRAME = 20
+private const val CATCHUP_FRAMES = 5
+private const val MAX_CHARS_PER_FRAME = 6
 
 /** Frame step for the typewriter: a third of the backlog (self-balancing),
  *  capped so a buffered burst stays visible, never below one char. */
