@@ -1,0 +1,14 @@
+insert:
+INSERT OR REPLACE INTO article_summaries (article_id, provider_key, prompt_hash, content, created_at)
+VALUES (:articleID, :providerKey, :promptHash, :content, :createdAt);
+
+findByArticle:
+SELECT content, created_at, provider_key, prompt_hash
+FROM article_summaries
+WHERE article_id = :articleID
+  AND provider_key = :providerKey
+  AND prompt_hash = :promptHash;
+
+deleteOrphaned:
+DELETE FROM article_summaries
+WHERE NOT EXISTS (SELECT 1 FROM articles WHERE articles.id = article_summaries.article_id);

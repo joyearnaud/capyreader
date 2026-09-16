@@ -228,6 +228,11 @@ deleteAllArticles {
    SELECT article_id FROM article_statuses
   );
 
+  DELETE FROM article_summaries
+  WHERE article_id NOT IN (
+    SELECT article_id FROM article_statuses
+  );
+
   DELETE FROM enclosures
   WHERE article_id NOT IN (
     SELECT article_id FROM article_statuses
@@ -251,6 +256,11 @@ deleteArticles {
   DELETE FROM article_notifications
   WHERE NOT EXISTS (
     SELECT 1 FROM articles WHERE articles.id = article_notifications.article_id
+  );
+
+  DELETE FROM article_summaries
+  WHERE NOT EXISTS (
+    SELECT 1 FROM articles WHERE articles.id = article_summaries.article_id
   );
 
   DELETE FROM saved_search_articles
@@ -278,6 +288,7 @@ deletePageByID {
   DELETE FROM article_statuses WHERE article_id = :articleID;
   DELETE FROM saved_search_articles WHERE article_id = :articleID;
   DELETE FROM article_notifications WHERE article_id = :articleID;
+  DELETE FROM article_summaries WHERE article_id = :articleID;
   DELETE FROM enclosures WHERE article_id = :articleID;
   DELETE FROM articles WHERE id = :articleID;
 }
@@ -289,6 +300,7 @@ deleteArticlesByID {
   DELETE FROM article_statuses WHERE article_id IN :articleIDs;
   DELETE FROM saved_search_articles WHERE article_id IN :articleIDs;
   DELETE FROM article_notifications WHERE article_id IN :articleIDs;
+  DELETE FROM article_summaries WHERE article_id IN :articleIDs;
   DELETE FROM enclosures WHERE article_id IN :articleIDs;
   DELETE FROM articles WHERE id IN :articleIDs;
 }

@@ -127,7 +127,7 @@ fun ArticleBottomBar(
                 ) {
                     IconButton(
                         enabled = summary.isConfigured && !summary.state.isVisible,
-                        onClick = { summary.summarize() },
+                        onClick = { summary.summarize(false) },
                     ) {
                         Icon(
                             Icons.Rounded.AutoAwesome,

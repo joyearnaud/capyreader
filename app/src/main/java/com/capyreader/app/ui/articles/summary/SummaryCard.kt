@@ -66,7 +66,7 @@ fun SummaryCard(
 
             Row {
                 TextButton(
-                    onClick = summary.summarize,
+                    onClick = { summary.summarize(true) },
                     enabled = !state.isLoading,
                 ) {
                     Text(stringResource(R.string.summary_card_resummarize))

@@ -7,6 +7,7 @@ import com.jocmp.capy.Article
 import com.jocmp.capy.ArticleFilter
 import com.jocmp.capy.ArticleNotification
 import com.jocmp.capy.ArticleStatus
+import com.jocmp.capy.ArticleSummaryRecord
 import com.jocmp.capy.FeedPriority
 import com.jocmp.capy.MarkRead
 import com.jocmp.capy.articles.SortOrder
@@ -152,6 +153,49 @@ class ArticleRecords(
             val cutoffDate = before.toEpochSecond()
 
             database.articlesQueries.deleteOrphanedStatuses(cutoffDate = cutoffDate)
+        }
+    }
+
+    fun upsertSummary(
+        articleID: String,
+        providerKey: String,
+        promptHash: String,
+        content: String,
+        now: ZonedDateTime = nowUTC(),
+    ) {
+        database.transactionWithErrorHandling {
+            database.article_summariesQueries.insert(
+                articleID = articleID,
+                providerKey = providerKey,
+                promptHash = promptHash,
+                content = content,
+                createdAt = now.toEpochSecond(),
+            )
+        }
+    }
+
+    fun findSummary(
+        articleID: String,
+        providerKey: String,
+        promptHash: String,
+    ): ArticleSummaryRecord? =
+        database.article_summariesQueries.findByArticle(
+            articleID = articleID,
+            providerKey = providerKey,
+            promptHash = promptHash,
+        ).executeAsOneOrNull()?.let { row ->
+            ArticleSummaryRecord(
+                articleID = articleID,
+                providerKey = row.provider_key,
+                promptHash = row.prompt_hash,
+                content = row.content,
+                createdAt = row.created_at.toDateTimeFromSeconds,
+            )
+        }
+
+    fun deleteOrphanedSummaries() {
+        database.transactionWithErrorHandling {
+            database.article_summariesQueries.deleteOrphaned()
         }
     }
 

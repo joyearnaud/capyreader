@@ -1,0 +1,8 @@
+CREATE TABLE article_summaries (
+  article_id TEXT NOT NULL,
+  provider_key TEXT NOT NULL,
+  prompt_hash TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (article_id, provider_key, prompt_hash)
+);

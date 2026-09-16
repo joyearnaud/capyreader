@@ -11,7 +11,9 @@ import com.capyreader.app.preferences.AppPreferences
 import com.capyreader.app.summaries.buildSummaryRequest
 import com.capyreader.app.summaries.isTruncated
 import com.jocmp.aiclient.SummaryClient
+import com.jocmp.capy.Account
 import com.jocmp.capy.Article
+import java.security.MessageDigest
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -29,7 +31,7 @@ data class SummaryUiState(
 class SummaryController(
     val state: SummaryUiState = SummaryUiState(),
     val isConfigured: Boolean = false,
-    val summarize: () -> Unit = {},
+    val summarize: (forceRefresh: Boolean) -> Unit = {},
     val dismiss: () -> Unit = {},
 )
 
@@ -38,6 +40,7 @@ fun rememberSummary(
     article: Article?,
     summaryClient: SummaryClient = koinInject(),
     appPreferences: AppPreferences = koinInject(),
+    account: Account = koinInject(),
 ): SummaryController {
     val scope = rememberCoroutineScope()
     var state by remember(article?.id) { mutableStateOf(SummaryUiState()) }
@@ -48,7 +51,11 @@ fun rememberSummary(
             article.content.isNotBlank() &&
             article.fullContent != Article.FullContentState.LOADING
 
-    val run: () -> Unit = {
+    val providerKey = "${appPreferences.aiOptions.baseURL.get().trimEnd('/')}/" +
+            appPreferences.aiOptions.model.get()
+    val hash = promptHash(appPreferences.aiOptions.prompt.get())
+
+    val run: (forceRefresh: Boolean) -> Unit = { forceRefresh ->
         val target = article
         if (target != null) {
             val request = buildSummaryRequest(
@@ -60,11 +67,34 @@ fun rememberSummary(
 
             scope.launch {
                 state = SummaryUiState(isLoading = true)
+
+                if (!forceRefresh) {
+                    val cached = account.findSummary(
+                        articleID = target.id,
+                        providerKey = providerKey,
+                        promptHash = hash,
+                    )
+
+                    if (cached != null) {
+                        state = SummaryUiState(text = cached.content, isTruncated = truncated)
+                        return@launch
+                    }
+                }
+
                 val result = summaryClient.summarize(request)
-                state = result.fold(
-                    onSuccess = { SummaryUiState(text = it, isTruncated = truncated) },
+                val newState = result.fold(
+                    onSuccess = { content ->
+                        account.upsertSummary(
+                            articleID = target.id,
+                            providerKey = providerKey,
+                            promptHash = hash,
+                            content = content,
+                        )
+                        SummaryUiState(text = content, isTruncated = truncated)
+                    },
                     onFailure = { SummaryUiState(error = it.message ?: "Summary failed") },
                 )
+                state = newState
             }
         }
     }
@@ -76,3 +106,8 @@ fun rememberSummary(
         dismiss = { state = SummaryUiState() },
     )
 }
+
+private fun promptHash(prompt: String): String =
+    MessageDigest.getInstance("SHA-256")
+        .digest(prompt.trim().replace("\r\n", "\n").toByteArray())
+        .joinToString("") { "%02x".format(it) }

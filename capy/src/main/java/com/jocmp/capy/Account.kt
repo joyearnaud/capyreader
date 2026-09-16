@@ -233,6 +233,8 @@ data class Account(
                 articleRecords.deleteOldArticles(before = cutoffDate)
 
                 articleRecords.deleteOrphanedStatuses(before = cutoffDate)
+
+                articleRecords.deleteOrphanedSummaries()
             }
 
             result
@@ -307,6 +309,27 @@ data class Account(
 
         val enclosures = enclosureRecords.findByArticle(articleID)
         return articleRecords.find(articleID = articleID)?.copy(enclosures = enclosures)
+    }
+
+    fun findSummary(articleID: String, providerKey: String, promptHash: String): ArticleSummaryRecord? =
+        articleRecords.findSummary(
+            articleID = articleID,
+            providerKey = providerKey,
+            promptHash = promptHash,
+        )
+
+    suspend fun upsertSummary(
+        articleID: String,
+        providerKey: String,
+        promptHash: String,
+        content: String,
+    ) = withIOContext {
+        articleRecords.upsertSummary(
+            articleID = articleID,
+            providerKey = providerKey,
+            promptHash = promptHash,
+            content = content,
+        )
     }
 
     suspend fun addStar(articleID: String): Result<Unit> {
