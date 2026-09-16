@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import com.capyreader.app.preferences.AppPreferences
 import com.capyreader.app.summaries.buildSummaryRequest
 import com.capyreader.app.summaries.isTruncated
@@ -96,29 +97,56 @@ fun rememberSummary(
                 }
 
             try {
-                var last: String? = null
-                var lastRenderNanos = 0L
-                summaryClient.summarizeStreaming(request).collect { cumulative ->
-                    last = cumulative
-                    val now = System.nanoTime()
-                    if (now - lastRenderNanos >= RENDER_INTERVAL_NANOS) {
-                        lastRenderNanos = now
-                        val (stable, tail) = splitStreamText(cumulative)
+                var streamed: String? = null
+                var failure: Throwable? = null
+                var full: String? = null
+
+                // The collector owns network errors so a child failure cannot
+                // surface as a silent cancellation of the animation loop below;
+                // the cache write is decoupled from the display pace (best-effort:
+                // a DB hiccup must not replace good text with an error).
+                val collector = launch {
+                    try {
+                        summaryClient.summarizeStreaming(request).collect { streamed = it }
+                        full = streamed
+                        streamed?.let {
+                            runCatching {
+                                account.upsertSummary(
+                                    articleID = target.id,
+                                    providerKey = providerKey,
+                                    promptHash = hash,
+                                    content = it,
+                                )
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        failure = e
+                    }
+                }
+
+                // Typewriter: display advances frame-locked toward the streamed
+                // text, independent of network chunk sizes.
+                var displayed = 0
+                while (collector.isActive || displayed < (streamed?.length ?: 0)) {
+                    val current = streamed
+                    if (current != null && current.length > displayed) {
+                        displayed = advanceDisplayed(displayed, current.length)
+                        val (stable, tail) = splitStreamText(current.substring(0, displayed))
                         holder.state = SummaryUiState(
                             text = stable,
                             streamTail = tail.ifBlank { null },
                             isTruncated = truncated,
                         )
                     }
+                    withFrameNanos { it }
                 }
-                last?.let {
-                    holder.state = SummaryUiState(text = it, isTruncated = truncated)
-                    account.upsertSummary(
-                        articleID = target.id,
-                        providerKey = providerKey,
-                        promptHash = hash,
-                        content = it,
-                    )
+
+                when {
+                    failure != null -> throw failure!!
+                    full != null -> holder.state = SummaryUiState(text = full, isTruncated = truncated)
+                    else -> holder.state = SummaryUiState(error = "Empty response from the provider")
                 }
             } catch (e: CancellationException) {
                     throw e
@@ -140,7 +168,19 @@ fun rememberSummary(
     )
 }
 
-private const val RENDER_INTERVAL_NANOS = 60L * 1_000_000
+private const val CATCHUP_FRAMES = 3
+private const val MAX_CHARS_PER_FRAME = 20
+
+/** Frame step for the typewriter: a third of the backlog (self-balancing),
+ *  capped so a buffered burst stays visible, never below one char. */
+internal fun advanceDisplayed(displayed: Int, targetLength: Int): Int {
+    if (targetLength <= displayed) return displayed
+
+    val remaining = targetLength - displayed
+    val step = maxOf(1, minOf(remaining / CATCHUP_FRAMES, MAX_CHARS_PER_FRAME))
+
+    return displayed + minOf(step, remaining)
+}
 
 /**
  * Complete blocks vs the block still being written: markdown syntax only

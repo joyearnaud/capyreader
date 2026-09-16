@@ -52,3 +52,22 @@ class StreamTextTest {
         assertTrue(!stripped.contains("|"))
     }
 }
+
+class AdvanceDisplayedTest {
+
+    @Test
+    fun `catches up by a third of the backlog`() {
+        assertEquals(10, advanceDisplayed(0, 30))
+    }
+
+    @Test
+    fun `caps the per-frame step`() {
+        assertEquals(20, advanceDisplayed(0, 1000))
+    }
+
+    @Test
+    fun `always advances by at least one char and clamps at the end`() {
+        assertEquals(300, advanceDisplayed(299, 300))
+        assertEquals(5, advanceDisplayed(5, 5))
+    }
+}
