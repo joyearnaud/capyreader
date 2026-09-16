@@ -1,5 +1,6 @@
 package com.capyreader.app.ui.articles.summary
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -50,21 +51,31 @@ fun SummaryCard(
 
             state.text?.let {
                 val body = MaterialTheme.typography.bodyLarge
-                Markdown(
-                    it,
-                    typography = markdownTypography(
-                        text = body,
-                        paragraph = body,
-                        list = body,
-                        h1 = MaterialTheme.typography.titleMedium,
-                        h2 = MaterialTheme.typography.titleMedium,
-                        h3 = body.copy(fontWeight = FontWeight.SemiBold),
-                        h4 = body.copy(fontWeight = FontWeight.SemiBold),
-                        h5 = body.copy(fontWeight = FontWeight.SemiBold),
-                        h6 = body.copy(fontWeight = FontWeight.SemiBold),
-                        quote = body.copy(fontStyle = FontStyle.Italic),
-                    ),
+                // One Markdown per block: the renderer flips to an async Loading
+                // state (rendered as nothing) whenever its content string changes,
+                // so a single growing Markdown call flashes the card shut every
+                // tick. A completed block's string never changes, hitting the
+                // early-return cache instead; only the newest block parses.
+                val typography = markdownTypography(
+                    text = body,
+                    paragraph = body,
+                    list = body,
+                    h1 = MaterialTheme.typography.titleMedium,
+                    h2 = MaterialTheme.typography.titleMedium,
+                    h3 = body.copy(fontWeight = FontWeight.SemiBold),
+                    h4 = body.copy(fontWeight = FontWeight.SemiBold),
+                    h5 = body.copy(fontWeight = FontWeight.SemiBold),
+                    h6 = body.copy(fontWeight = FontWeight.SemiBold),
+                    quote = body.copy(fontStyle = FontStyle.Italic),
                 )
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    it.split(Regex("\n\n+"))
+                        .filter { block -> block.isNotBlank() }
+                        .forEach { block ->
+                            Markdown(block, typography = typography)
+                        }
+                }
             }
 
             state.streamTail?.takeIf { it.isNotBlank() }?.let { tail ->
