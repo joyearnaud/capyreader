@@ -14,6 +14,8 @@ import com.jocmp.aiclient.SummaryClient
 import com.jocmp.capy.Account
 import com.jocmp.capy.Article
 import java.security.MessageDigest
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -44,6 +46,7 @@ fun rememberSummary(
 ): SummaryController {
     val scope = rememberCoroutineScope()
     var state by remember(article?.id) { mutableStateOf(SummaryUiState()) }
+    var activeJob by remember { mutableStateOf<Job?>(null) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
     val canSummarize = article != null &&
@@ -65,7 +68,8 @@ fun rememberSummary(
             )
             val truncated = isTruncated(target.content)
 
-            scope.launch {
+            activeJob?.cancel()
+            activeJob = scope.launch {
                 state = SummaryUiState(isLoading = true)
 
                 if (!forceRefresh) {
@@ -81,20 +85,25 @@ fun rememberSummary(
                     }
                 }
 
-                val result = summaryClient.summarize(request)
-                val newState = result.fold(
-                    onSuccess = { content ->
+                try {
+                    var last: String? = null
+                    summaryClient.summarizeStreaming(request).collect { cumulative ->
+                        last = cumulative
+                        state = SummaryUiState(text = cumulative, isTruncated = truncated)
+                    }
+                    last?.let {
                         account.upsertSummary(
                             articleID = target.id,
                             providerKey = providerKey,
                             promptHash = hash,
-                            content = content,
+                            content = it,
                         )
-                        SummaryUiState(text = content, isTruncated = truncated)
-                    },
-                    onFailure = { SummaryUiState(error = it.message ?: "Summary failed") },
-                )
-                state = newState
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    state = SummaryUiState(error = e.message ?: "Summary failed")
+                }
             }
         }
     }
@@ -103,7 +112,10 @@ fun rememberSummary(
         state = state,
         isConfigured = canSummarize,
         summarize = run,
-        dismiss = { state = SummaryUiState() },
+        dismiss = {
+            activeJob?.cancel()
+            state = SummaryUiState()
+        },
     )
 }
 

@@ -1,5 +1,6 @@
 package com.jocmp.aiclient
 
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -85,7 +86,7 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    fun `fails when content is null`() = runTest {
+fun `fails when content is null`() = runTest {
         server.enqueue(
             MockResponse(body = """{"choices":[{"finish_reason":"length","message":{"content":null}}]}""")
         )
@@ -179,4 +180,106 @@ class OpenAiCompatibleClientTest {
         val error = summaryError(503, "not json")
         assertTrue(error.message!!.contains("503"), error.message)
     }
+
+    @Test
+    fun `streams cumulative content deltas`() = runTest {
+        server.enqueue(
+            MockResponse(
+                body = """
+                    data: {"choices":[{"delta":{"role":"assistant"}}]}
+
+                    : keep-alive
+
+                    data:{"choices":[{"delta":{"content":"Bon"}}]}
+
+                    data: {"choices":[{"delta":{"content":"jour"}}]}
+
+                    data: {"choices":[{"delta":{},"finish_reason":"stop"}]}
+
+                    data: [DONE]
+
+                """.trimIndent()
+            )
+        )
+
+        val emissions = client({ config.copy(baseURL = baseURL()) })
+            .summarizeStreaming(request())
+            .toList()
+
+        assertEquals(listOf("Bon", "Bonjour"), emissions)
+
+        val recorded = server.takeRequest(2, TimeUnit.SECONDS)!!
+        assertTrue(recorded.body?.utf8().orEmpty().contains("\"stream\":true"))
+    }
+
+    @Test
+    fun `ignores reasoning deltas in a stream`() = runTest {
+        server.enqueue(
+            MockResponse(
+                body = """
+                    data: {"choices":[{"delta":{"reasoning_content":"thinking..."}}]}
+
+                    data: {"choices":[{"delta":{"content":"Réponse"}}]}
+
+                    data: [DONE]
+
+                """.trimIndent()
+            )
+        )
+
+        val emissions = client({ config.copy(baseURL = baseURL()) })
+            .summarizeStreaming(request())
+            .toList()
+
+        assertEquals(listOf("Réponse"), emissions)
+    }
+
+    @Test
+    fun `marks a stream cut by the token limit`() = runTest {
+        server.enqueue(
+            MockResponse(
+                body = """
+                    data: {"choices":[{"delta":{"content":"Coupé au mil"}}]}
+
+                    data: {"choices":[{"delta":{},"finish_reason":"length"}]}
+
+                    data: [DONE]
+
+                """.trimIndent()
+            )
+        )
+
+        val emissions = client({ config.copy(baseURL = baseURL()) })
+            .summarizeStreaming(request())
+            .toList()
+
+        assertEquals(listOf("Coupé au mil", "Coupé au mil\n[…]"), emissions)
+    }
+
+    @Test
+    fun `fails on http error in a stream`() = runTest {
+        server.enqueue(
+            MockResponse(code = 401, body = """{"error":{"message":"Authentication Fails"}}""")
+        )
+
+        val outcome = runCatching {
+            client({ config.copy(baseURL = baseURL()) }).summarizeStreaming(request()).toList()
+        }
+
+        assertTrue(outcome.isFailure)
+        assertTrue(outcome.exceptionOrNull() is SummaryException)
+    }
+
+    @Test
+    fun `fails when a stream ends without content`() = runTest {
+        server.enqueue(MockResponse(body = "data: [DONE]\n\n"))
+
+        val outcome = runCatching {
+            client({ config.copy(baseURL = baseURL()) }).summarizeStreaming(request()).toList()
+        }
+
+        assertTrue(outcome.isFailure)
+        assertTrue(outcome.exceptionOrNull() is SummaryException)
+    }
+
 }
