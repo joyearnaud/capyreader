@@ -16,9 +16,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.capyreader.app.R
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownTypography
 
 @Composable
 fun SummaryCard(
@@ -46,7 +49,22 @@ fun SummaryCard(
             }
 
             state.text?.let {
-                Markdown(it)
+                val body = MaterialTheme.typography.bodyLarge
+                Markdown(
+                    it,
+                    typography = markdownTypography(
+                        text = body,
+                        paragraph = body,
+                        list = body,
+                        h1 = MaterialTheme.typography.titleMedium,
+                        h2 = MaterialTheme.typography.titleMedium,
+                        h3 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h4 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h5 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h6 = body.copy(fontWeight = FontWeight.SemiBold),
+                        quote = body.copy(fontStyle = FontStyle.Italic),
+                    ),
+                )
             }
 
             state.error?.let {

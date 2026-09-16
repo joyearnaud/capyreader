@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.capyreader.app.R
 import com.capyreader.app.common.RowItem
+import com.capyreader.app.preferences.AppPreferences
 import com.capyreader.app.ui.components.FormSection
 import com.capyreader.app.ui.theme.CapyTheme
 import org.koin.androidx.compose.koinViewModel
@@ -62,6 +64,8 @@ fun AiSettingsPanelView(
     val (showApiKey, setApiKeyVisibility) = rememberSaveable {
         mutableStateOf(false)
     }
+
+    var showRestoreDialog by rememberSaveable { mutableStateOf(false) }
 
     val apiKeyTransformation = if (showApiKey) {
         VisualTransformation.None
@@ -160,7 +164,20 @@ fun AiSettingsPanelView(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
+                TextButton(onClick = { showRestoreDialog = true }) {
+                    Text(stringResource(R.string.settings_ai_restore_prompt))
+                }
             }
+        }
+
+        if (showRestoreDialog) {
+            RestorePromptDialog(
+                onConfirm = {
+                    updatePrompt(AppPreferences.AiOptions.DEFAULT_PROMPT)
+                    showRestoreDialog = false
+                },
+                onDismissRequest = { showRestoreDialog = false },
+            )
         }
     }
 }

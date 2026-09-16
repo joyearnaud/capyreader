@@ -355,4 +355,8 @@
     <string name="article_list_new_articles_pill">Nouveaux articles</string>
     <string name="settings_refresh_on_wifi_only">Actualiser en Wi-Fi uniquement</string>
     <string name="refresh_skipped_mobile">Actualisation ignorée sur le réseau mobile</string>
+    <string name="settings_ai_restore_prompt">Rétablir le prompt par défaut</string>
+    <string name="settings_ai_restore_prompt_title">Rétablir le prompt par défaut ?</string>
+    <string name="settings_ai_restore_prompt_text">Ceci remplace votre prompt actuel par le prompt par défaut. Action irréversible.</string>
+    <string name="settings_ai_restore_prompt_confirm">Rétablir</string>
 </resources>

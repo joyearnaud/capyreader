@@ -374,6 +374,10 @@
     <string name="settings_ai_api_key">API key</string>
     <string name="settings_ai_api_key_subtitle">Stored on this device only</string>
     <string name="settings_ai_prompt">Prompt</string>
+    <string name="settings_ai_restore_prompt">Restore default prompt</string>
+    <string name="settings_ai_restore_prompt_title">Restore default prompt?</string>
+    <string name="settings_ai_restore_prompt_text">This replaces your current prompt with the default prompt. This cannot be undone.</string>
+    <string name="settings_ai_restore_prompt_confirm">Restore</string>
 
     <string name="summary_action">Summarize</string>
     <string name="summary_card_title">AI summary</string>
