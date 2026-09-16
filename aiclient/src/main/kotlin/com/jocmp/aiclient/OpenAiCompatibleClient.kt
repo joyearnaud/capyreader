@@ -34,7 +34,10 @@ private data class ChatMessage(val role: String, val content: String)
 private data class ChatResponse(val choices: List<ChatChoice> = emptyList())
 
 @Serializable
-private data class ChatChoice(val message: ChatResponseMessage? = null)
+private data class ChatChoice(
+    val message: ChatResponseMessage? = null,
+    @SerialName("finish_reason") val finishReason: String? = null,
+)
 
 @Serializable
 private data class ChatResponseMessage(val role: String? = null, val content: String? = null)
@@ -56,7 +59,7 @@ internal fun summaryError(status: Int, body: String): SummaryException {
 class OpenAiCompatibleClient(
     private val httpClient: OkHttpClient,
     private val config: () -> ProviderConfig,
-    private val maxTokens: Int = 1024,
+    private val maxTokens: Int = 4096,
     private val temperature: Double = 0.2,
 ) : SummaryClient {
 
@@ -90,13 +93,15 @@ class OpenAiCompatibleClient(
                     val text = response.body.string()
                     if (!response.isSuccessful) throw summaryError(response.code, text)
 
-                    val content = json.decodeFromString<ChatResponse>(text)
+                    val choice = json.decodeFromString<ChatResponse>(text)
                         .choices.firstOrNull()
-                        ?.message
-                        ?.content
+                    val content = choice?.message?.content?.takeIf { it.isNotBlank() }
+                        ?: throw when (choice?.finishReason) {
+                            "length" -> SummaryException("Empty response (token limit reached)")
+                            else -> SummaryException("Empty response from the provider")
+                        }
 
-                    content?.takeIf { it.isNotBlank() }
-                        ?: throw SummaryException("Empty response from the provider")
+                    if (choice.finishReason == "length") content + "\n[…]" else content
                 }
             }.onFailure { if (it is CancellationException) throw it }
         }

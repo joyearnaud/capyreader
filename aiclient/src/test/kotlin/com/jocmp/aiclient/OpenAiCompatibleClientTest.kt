@@ -66,7 +66,7 @@ class OpenAiCompatibleClientTest {
         val body = recorded.body?.utf8().orEmpty()
         assertTrue(body.contains("\"model\":\"deepseek-chat\""), body)
         assertTrue(body.contains("\"stream\":false"), body)
-        assertTrue(body.contains("\"max_tokens\":1024"), body)
+        assertTrue(body.contains("\"max_tokens\":4096"), body)
         assertTrue(body.contains("Some article body"), body)
         assertTrue(body.contains("A title"), body)
     }
@@ -94,6 +94,19 @@ class OpenAiCompatibleClientTest {
 
         assertTrue(result.isFailure, result.toString())
         assertTrue(result.exceptionOrNull() is SummaryException)
+    }
+
+    @Test
+    fun `marks a response cut by the token limit`() = runTest {
+        server.enqueue(
+            MockResponse(
+                body = """{"choices":[{"finish_reason":"length","message":{"content":"Résumé coupé au mil"}}]}"""
+            )
+        )
+
+        val result = client({ config.copy(baseURL = baseURL()) }).summarize(request())
+
+        assertEquals("Résumé coupé au mil\n[…]", result.getOrNull())
     }
 
     @Test
