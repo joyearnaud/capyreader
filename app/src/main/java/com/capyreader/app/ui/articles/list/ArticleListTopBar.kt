@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Notes
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import com.jocmp.capy.accounts.Source
 fun ArticleListTopBar(
     onRequestJumpToTop: () -> Unit,
     onNavigateToDrawer: () -> Unit,
+    onSummarizeList: (() -> Unit)? = null,
     onRemoveFolder: (folderTitle: String, completion: (result: Result<Unit>) -> Unit) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
     search: ArticleSearch,
@@ -137,6 +139,14 @@ fun ArticleListTopBar(
             }
         },
         actions = {
+            if (onSummarizeList != null) {
+                IconButton(onClick = onSummarizeList) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notes,
+                        contentDescription = stringResource(R.string.list_summary_action)
+                    )
+                }
+            }
             FilterActionMenu(
                 filter = filter,
                 currentFeed = currentFeed,

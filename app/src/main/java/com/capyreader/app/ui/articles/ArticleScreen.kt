@@ -60,7 +60,10 @@ import com.capyreader.app.ui.LocalLinkOpener
 import com.capyreader.app.ui.LocalMarkAllReadButtonPosition
 import com.capyreader.app.ui.LocalTimeFormats
 import com.capyreader.app.ui.LocalUnreadCount
+import com.capyreader.app.ui.navigationTitle
 import com.capyreader.app.ui.articles.audio.AudioPlayerController
+import com.capyreader.app.ui.articles.summary.ListSummarySheet
+import com.capyreader.app.ui.articles.summary.rememberListSummary
 import com.capyreader.app.ui.articles.audio.FloatingAudioPlayer
 import com.capyreader.app.ui.articles.detail.ArticleView
 import com.capyreader.app.ui.articles.detail.CapyPlaceholder
@@ -163,6 +166,19 @@ fun ArticleScreen(
     val badgeStyle by appPreferences.badgeStyle.collectChangesWithDefault()
 
     val articles = viewModel.articles.collectAsLazyPagingItems()
+
+    val listSummaryScopeLabel = when (val f = filter) {
+        is ArticleFilter.Articles -> stringResource(f.articleStatus.navigationTitle)
+        is ArticleFilter.Feeds -> allFeeds.find { it.id == f.feedID }?.displayTitle() ?: f.feedID
+        is ArticleFilter.Folders -> allFolders.find { it.title == f.folderTitle }?.title ?: f.folderTitle
+        is ArticleFilter.Today -> stringResource(R.string.filter_today)
+        is ArticleFilter.SavedSearches -> null
+    }
+    val listSummary = rememberListSummary(
+        filter = filter,
+        scopeLabel = listSummaryScopeLabel.orEmpty(),
+    )
+    var showListSummary by remember { mutableStateOf(false) }
 
     val onMarkAllRead = { range: MarkRead ->
         viewModel.markAllRead(
@@ -543,6 +559,14 @@ fun ArticleScreen(
                             }),
                         topBar = {
                             ArticleListTopBar(
+                                onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0) {
+                                    {
+                                        listSummary.summarize()
+                                        showListSummary = true
+                                    }
+                                } else {
+                                    null
+                                },
                                 onRequestJumpToTop = { scrollToTop() },
                                 onNavigateToDrawer = { openDrawer() },
                                 onRemoveFolder = { folderTitle, completion ->
@@ -684,6 +708,13 @@ fun ArticleScreen(
                 }
             }
         )
+
+        if (showListSummary) {
+            ListSummarySheet(
+                controller = listSummary,
+                onDismiss = { showListSummary = false },
+            )
+        }
 
         LaunchedEffect(scaffoldNavigator.currentDestination) {
             val isOnList =
