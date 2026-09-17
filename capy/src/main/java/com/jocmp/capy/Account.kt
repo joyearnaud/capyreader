@@ -318,6 +318,9 @@ data class Account(
             promptHash = promptHash,
         )
 
+    fun findRecentForDigest(filter: ArticleFilter, limit: Long = 200): List<Article> =
+        articleRecords.findRecentForDigest(filter, limit)
+
     suspend fun upsertSummary(
         articleID: String,
         providerKey: String,

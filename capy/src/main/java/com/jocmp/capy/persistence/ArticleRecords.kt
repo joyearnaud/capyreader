@@ -199,6 +199,58 @@ class ArticleRecords(
         }
     }
 
+    /** Most recent articles for a list digest, both read statuses included.
+     *  Saved searches are excluded (v1) and return an empty list. */
+    fun findRecentForDigest(
+        filter: ArticleFilter,
+        limit: Long = 200,
+    ): List<Article> {
+        return when (filter) {
+            is ArticleFilter.Articles -> byStatus.all(
+                status = ArticleStatus.ALL,
+                limit = limit,
+                offset = 0,
+                sortOrder = SortOrder.NEWEST_FIRST,
+            )
+
+            is ArticleFilter.Feeds -> byFeed.all(
+                feedIDs = listOf(filter.feedID),
+                status = ArticleStatus.ALL,
+                since = nowUTC().toOffsetDateTime(),
+                limit = limit,
+                offset = 0,
+                sortOrder = SortOrder.NEWEST_FIRST,
+                priority = FeedPriority.FEED,
+            )
+
+            is ArticleFilter.Folders -> {
+                val feedIDs = database.taggingsQueries
+                    .findFeedIDs(folderTitle = filter.folderTitle)
+                    .executeAsList()
+
+                byFeed.all(
+                    feedIDs = feedIDs,
+                    status = ArticleStatus.ALL,
+                    since = nowUTC().toOffsetDateTime(),
+                    limit = limit,
+                    offset = 0,
+                    sortOrder = SortOrder.NEWEST_FIRST,
+                    priority = FeedPriority.CATEGORY,
+                )
+            }
+
+            is ArticleFilter.Today -> byToday.all(
+                status = ArticleStatus.ALL,
+                limit = limit,
+                offset = 0,
+                sortOrder = SortOrder.NEWEST_FIRST,
+                since = null,
+            )
+
+            is ArticleFilter.SavedSearches -> return emptyList()
+        }.executeAsList()
+    }
+
     fun markAllUnread(articleIDs: List<String>, updatedAt: ZonedDateTime = nowUTC()) {
         val updated = updatedAt.toEpochSecond()
 
