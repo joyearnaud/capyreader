@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,7 +26,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,18 +57,9 @@ fun ListSummarySheet(
     if (!state.isVisible) return
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        // Top-anchored: verticalScroll is px-anchored, so the growing text
+        // simply extends below the fold — no follow, no jump.
         val scrollState = rememberScrollState()
-
-        // Chat-style follow: while streaming, keep the viewport pinned to the
-        // bottom (only when the reader is already near it) so the growth
-        // happens below the fold instead of flickering at the screen edge.
-        LaunchedEffect(state.text, state.streamTail) {
-            if (state.streamTail != null && !state.isLoading) {
-                if (scrollState.maxValue - scrollState.value < 240) {
-                    scrollState.scrollTo(scrollState.maxValue)
-                }
-            }
-        }
 
         val defaultUriHandler = LocalUriHandler.current
         val uriHandler = remember(defaultUriHandler) {
@@ -117,6 +108,8 @@ fun ListSummarySheet(
                         referenceTargets = controller.referenceTargets,
                     )
                 }
+
+                Spacer(Modifier.height(20.dp))
 
                 val generationComplete = state.text != null &&
                         state.streamTail == null &&

@@ -15,9 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.toFontFamily
 import androidx.compose.ui.unit.sp
 import com.capyreader.app.R
 import com.jocmp.capy.articles.FontOption
@@ -58,7 +56,7 @@ fun ArticleFontMenu(
                     text = {
                         Text(
                             text = text,
-                            fontFamily = findFont(option),
+                            fontFamily = option.toFontFamily(),
                             fontWeight = FontWeight.Normal,
                             fontSize = 16.sp
                         )
@@ -84,13 +82,3 @@ private fun Context.translationKey(option: FontOption): String {
         FontOption.VOLLKORN -> getString(R.string.font_option_vollkorn)
     }
 }
-
-private fun findFont(fontOption: FontOption) = when (fontOption) {
-    FontOption.SYSTEM_DEFAULT -> null
-    FontOption.ATKINSON_HYPERLEGIBLE -> Font(resId = R.font.atkinson_hyperlegible)
-    FontOption.INTER -> Font(resId = R.font.inter)
-    FontOption.JOST -> Font(resId = R.font.jost)
-    FontOption.LITERATA -> Font(resId = R.font.literata)
-    FontOption.POPPINS -> Font(resId = R.font.poppins)
-    FontOption.VOLLKORN -> Font(resId = R.font.vollkorn)
-}?.toFontFamily()

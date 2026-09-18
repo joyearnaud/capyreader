@@ -5,15 +5,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.capyreader.app.preferences.AppPreferences
+import com.capyreader.app.ui.articles.detail.toFontFamily
+import com.capyreader.app.ui.collectChangesWithDefault
+import com.jocmp.capy.articles.FontSize
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
+import org.koin.compose.koinInject
 
 /**
  * The streamed summary body: per-block Markdown plus the plain stripped
@@ -27,9 +35,28 @@ fun SummaryContent(
     modifier: Modifier = Modifier,
     referenceTargets: List<String> = emptyList(),
 ) {
+    val appPreferences: AppPreferences = koinInject()
+    val readerFontFamily by appPreferences.readerOptions.fontFamily.collectChangesWithDefault()
+    val readerFontSize by appPreferences.readerOptions.fontSize.collectChangesWithDefault()
+
+    // Match the article reader: its font family and its body size (CSS px ~
+    // sp at unit scale; sp keeps system font-scale accessibility for app UI).
+    // Headings scale by the same ratio so they never sink below the body.
+    val family = readerFontFamily.toFontFamily() ?: FontFamily.Default
+    val ratio = readerFontSize / FontSize.DEFAULT.toFloat()
+    val body = MaterialTheme.typography.bodyLarge.copy(
+        fontFamily = family,
+        fontSize = readerFontSize.sp,
+        lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * ratio,
+    )
+    val heading = MaterialTheme.typography.titleMedium.copy(
+        fontFamily = family,
+        fontSize = MaterialTheme.typography.titleMedium.fontSize * ratio,
+        lineHeight = MaterialTheme.typography.titleMedium.lineHeight * ratio,
+    )
+
     Column(modifier) {
         state.text?.let { raw ->
-            val body = MaterialTheme.typography.bodyLarge
             // One Markdown per block: the renderer flips to an async Loading
             // state (rendered as nothing) whenever its content string changes,
             // so a single growing Markdown call flashes the card shut every
@@ -39,8 +66,8 @@ fun SummaryContent(
                 text = body,
                 paragraph = body,
                 list = body,
-                h1 = MaterialTheme.typography.titleMedium,
-                h2 = MaterialTheme.typography.titleMedium,
+                h1 = heading,
+                h2 = heading,
                 h3 = body.copy(fontWeight = FontWeight.SemiBold),
                 h4 = body.copy(fontWeight = FontWeight.SemiBold),
                 h5 = body.copy(fontWeight = FontWeight.SemiBold),
@@ -67,7 +94,7 @@ fun SummaryContent(
         state.streamTail?.takeIf { it.isNotBlank() }?.let { tail ->
             Text(
                 text = stripStreamTailMarkers(tail),
-                style = MaterialTheme.typography.bodyLarge,
+                style = body,
             )
         }
 
