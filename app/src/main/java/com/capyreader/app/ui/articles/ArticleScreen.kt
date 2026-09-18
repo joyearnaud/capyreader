@@ -3,14 +3,20 @@ package com.capyreader.app.ui.articles
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Notes
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -181,6 +187,7 @@ fun ArticleScreen(
         scopeLabel = listSummaryScopeLabel.orEmpty(),
     )
     var showListSummary by remember { mutableStateOf(false) }
+    var returnToSummary by remember { mutableStateOf(false) }
 
     val onMarkAllRead = { range: MarkRead ->
         viewModel.markAllRead(
@@ -714,10 +721,38 @@ fun ArticleScreen(
         if (showListSummary) {
             ListSummarySheet(
                 controller = listSummary,
-                onDismiss = { showListSummary = false },
-                onOpenArticle = { selectArticle(it) },
+                onDismiss = {
+                    showListSummary = false
+                    returnToSummary = false
+                },
+                onOpenArticle = {
+                    showListSummary = false
+                    returnToSummary = true
+                    selectArticle(it)
+                },
                 onMarkAllRead = { markAllRead(MarkRead.All) },
             )
+        }
+
+        Box(Modifier.fillMaxSize()) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = returnToSummary && article != null,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 96.dp, end = 20.dp),
+            ) {
+                SmallFloatingActionButton(onClick = {
+                    returnToSummary = false
+                    showListSummary = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Notes,
+                        contentDescription = stringResource(R.string.list_summary_back),
+                    )
+                }
+            }
         }
 
         LaunchedEffect(scaffoldNavigator.currentDestination) {

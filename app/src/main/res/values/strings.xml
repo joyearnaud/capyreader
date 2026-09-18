@@ -378,6 +378,7 @@
     <string name="list_summary_action">Summarize this list</string>
     <string name="list_summary_title">Summary</string>
     <string name="list_summary_generating">Generating summary…</string>
+    <string name="list_summary_back">Back to summary</string>
     <string name="settings_ai_list_cache">Cache list digests</string>
     <string name="settings_ai_list_cache_subtitle">Reopen a list summary instantly instead of regenerating it</string>
     <string name="settings_section_ai_caches">Summary caching</string>

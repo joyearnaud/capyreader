@@ -1,11 +1,17 @@
 package com.capyreader.app.ui.articles.summary
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
@@ -92,22 +100,46 @@ fun ListSummarySheet(
                         text = stringResource(R.string.list_summary_title),
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(16.dp)) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = state.isLoading,
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                        ) {
-                            CircularProgressIndicator(Modifier.size(16.dp))
-                        }
-                    }
                     AnimatedVisibility(visible = state.isLoading) {
-                        Text(
-                            text = stringResource(R.string.list_summary_generating),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        val pulse by rememberInfiniteTransition(label = "skeleton").animateFloat(
+                            initialValue = 0.4f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                tween(900, easing = LinearEasing),
+                                RepeatMode.Reverse,
+                            ),
+                            label = "pulse",
                         )
+
+                        Column(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            CircularProgressIndicator(Modifier.size(28.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.list_summary_generating),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(32.dp))
+                            repeat(5) { line ->
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth(1f - line * 0.08f)
+                                        .height(14.dp)
+                                        .clip(RoundedCornerShape(7.dp))
+                                        .background(
+                                            MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = 0.10f * pulse,
+                                            )
+                                        )
+                                )
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        }
                     }
                 }
 
