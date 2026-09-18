@@ -18,17 +18,17 @@ class ListSummaryCache {
             size > MAX_ENTRIES
     }
 
-    fun get(scope: ArticleFilter, selection: List<DigestEntry>, prompt: String): Entry? =
-        entries[keyOf(scope, selection, prompt)]
+    fun get(scope: ArticleFilter, articleIds: List<String>, prompt: String): Entry? =
+        entries[keyOf(scope, articleIds, prompt)]
 
-    fun put(scope: ArticleFilter, selection: List<DigestEntry>, prompt: String, entry: Entry) {
-        entries[keyOf(scope, selection, prompt)] = entry
+    fun put(scope: ArticleFilter, articleIds: List<String>, prompt: String, entry: Entry) {
+        entries[keyOf(scope, articleIds, prompt)] = entry
     }
 
-    private fun keyOf(scope: ArticleFilter, selection: List<DigestEntry>, prompt: String) = Key(
+    private fun keyOf(scope: ArticleFilter, articleIds: List<String>, prompt: String) = Key(
         scope = scope.toString(),
-        selectionHash = selection.map { it.id }.hashCode(),
-        promptHash = (prompt + selection.size).hashCode(),
+        selectionHash = articleIds.hashCode(),
+        promptHash = (prompt + articleIds.size).hashCode(),
     )
 
     private companion object {

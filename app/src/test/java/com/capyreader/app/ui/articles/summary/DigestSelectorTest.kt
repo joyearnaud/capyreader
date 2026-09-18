@@ -1,8 +1,10 @@
 package com.capyreader.app.ui.articles.summary
 
+import com.jocmp.capy.Article
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.URL
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -12,20 +14,33 @@ class DigestSelectorTest {
     private fun at(day: Int, hour: Int = 10): ZonedDateTime =
         ZonedDateTime.of(LocalDateTime.of(2026, 9, day, hour, 0), ZoneId.systemDefault())
 
-    private fun entriesFor(vararg days: Pair<Int, Int>): List<DigestEntry> =
+    private fun article(id: String, at: ZonedDateTime): Article = Article(
+        id = id,
+        feedID = "f1",
+        title = "Title $id",
+        author = null,
+        contentHTML = "",
+        url = URL("https://example.com/$id"),
+        summary = "excerpt",
+        imageURL = null,
+        updatedAt = at,
+        publishedAt = at,
+        read = false,
+        starred = false,
+        feedName = "Feed",
+    )
+
+    private fun articlesFor(vararg days: Pair<Int, Int>): List<Article> =
         buildList {
             days.forEach { (day, count) ->
-                repeat(count) { i -> add(entry("d${day}-$i", at(day, 8 + i % 10))) }
+                repeat(count) { i -> add(article("d$day-$i", at(day, 8 + i % 10))) }
             }
         }
-
-    private fun entry(id: String, at: ZonedDateTime) =
-        DigestEntry(id = id, feedName = "Feed", publishedAt = at, title = "Title $id", excerpt = "excerpt")
 
     @Test
     fun `accumulates whole days until the soft cap`() {
         // 30 + 30 = 60 >= 50 -> the third day is never opened
-        val selected = selectDigestDays(entriesFor(10 to 30, 9 to 30, 8 to 30))
+        val selected = selectDigestArticles(articlesFor(10 to 30, 9 to 30, 8 to 30))
 
         assertEquals(60, selected.size)
         assertTrue(selected.all { it.publishedAt.dayOfMonth >= 9 })
@@ -33,14 +48,14 @@ class DigestSelectorTest {
 
     @Test
     fun `first day is kept whole even beyond the soft cap`() {
-        val selected = selectDigestDays(entriesFor(10 to 70))
+        val selected = selectDigestArticles(articlesFor(10 to 70))
 
         assertEquals(70, selected.size)
     }
 
     @Test
     fun `trims the oldest entries to the hard cap`() {
-        val selected = selectDigestDays(entriesFor(10 to 200))
+        val selected = selectDigestArticles(articlesFor(10 to 200))
 
         assertEquals(120, selected.size)
         assertTrue(selected.all { it.publishedAt.dayOfMonth == 10 })
@@ -51,12 +66,12 @@ class DigestSelectorTest {
 
     @Test
     fun `empty list selects nothing`() {
-        assertEquals(0, selectDigestDays(emptyList()).size)
+        assertEquals(0, selectDigestArticles(emptyList()).size)
     }
 
     @Test
     fun `days are accumulated newest first`() {
-        val selected = selectDigestDays(entriesFor(8 to 10, 10 to 10, 9 to 10))
+        val selected = selectDigestArticles(articlesFor(8 to 10, 10 to 10, 9 to 10))
 
         // 10 + 10 + 10 = 30 < 50 -> every day is opened, oldest last
         assertEquals(30, selected.size)

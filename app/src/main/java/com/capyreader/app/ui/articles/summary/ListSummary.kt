@@ -55,27 +55,28 @@ fun rememberListSummary(
 
             try {
                 val listPrompt = appPreferences.aiOptions.listPrompt.get()
-                val fetched = withContext(Dispatchers.IO) {
-                    account.findRecentForDigest(filter)
+                val entries = withContext(Dispatchers.IO) {
+                    selectDigestArticles(account.findRecentForDigest(filter))
+                        .map { buildDigestEntry(it) }
                 }
-                val selection = selectDigestDays(fetched.map { buildDigestEntry(it) })
 
-                if (selection.isEmpty()) {
+                if (entries.isEmpty()) {
                     holder.state = SummaryUiState(error = "No articles to summarize")
                     return@launch
                 }
 
-                val targets = selection.map { it.id }
+                val targets = entries.map { it.id }
                 holder.referenceTargets = targets
 
-                if (appPreferences.aiOptions.listDigestCacheEnabled.get()) {
-                    cache.get(filter, selection, listPrompt)?.let { entry ->
+                val cacheEnabled = appPreferences.aiOptions.listDigestCacheEnabled.get()
+                if (cacheEnabled) {
+                    cache.get(filter, targets, listPrompt)?.let { entry ->
                         holder.state = SummaryUiState(text = entry.text)
                         return@launch
                     }
                 }
 
-                val request = buildListSummaryRequest(scopeLabel, selection, listPrompt)
+                val request = buildListSummaryRequest(scopeLabel, entries, listPrompt)
 
                 var streamed: String? = null
                 var failure: Throwable? = null
@@ -113,7 +114,7 @@ fun rememberListSummary(
                         if (appPreferences.aiOptions.listDigestCacheEnabled.get()) {
                             cache.put(
                                 filter,
-                                selection,
+                                targets,
                                 listPrompt,
                                 ListSummaryCache.Entry(text = completed, articleIds = targets),
                             )

@@ -197,7 +197,6 @@ Please generate a comprehensive AI summary based on the articles. Requirements:
 4. **Format Requirements**:
    - Use standard Markdown format
    - Use appropriate heading levels (#, ##, ###)
-   - Show article image if available
 
 5. **Language**:
    - All headings, content, summary, and analysis should be in French

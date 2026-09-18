@@ -1,5 +1,11 @@
 package com.capyreader.app.ui.articles.summary
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,34 +82,48 @@ fun ListSummarySheet(
                         text = stringResource(R.string.list_summary_title),
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    if (state.isLoading) {
-                        Spacer(Modifier.width(8.dp))
-                        CircularProgressIndicator(Modifier.size(16.dp))
+                    AnimatedVisibility(
+                        visible = state.isLoading,
+                        exit = fadeOut() + shrinkVertically(),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Spacer(Modifier.width(8.dp))
+                            CircularProgressIndicator(Modifier.size(16.dp))
+                        }
                     }
                 }
 
-                SummaryContent(
-                    state = state,
-                    modifier = Modifier.padding(top = 12.dp),
-                    referenceTargets = controller.referenceTargets,
-                )
-
-                Spacer(Modifier.heightIn(min = 8.dp))
-
-                Button(
-                    onClick = {
-                        onMarkAllRead()
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+                AnimatedVisibility(
+                    visible = state.text != null || state.error != null,
+                    enter = fadeIn(tween(220)) + expandVertically(tween(220)),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.DoneAll,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                    SummaryContent(
+                        state = state,
+                        modifier = Modifier.padding(top = 12.dp),
+                        referenceTargets = controller.referenceTargets,
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.action_mark_all_read))
+                }
+
+                val generationComplete = state.text != null &&
+                        state.streamTail == null &&
+                        !state.isLoading &&
+                        state.error == null
+                AnimatedVisibility(visible = generationComplete) {
+                    Button(
+                        onClick = {
+                            onMarkAllRead()
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.DoneAll,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.action_mark_all_read))
+                    }
                 }
 
                 Spacer(Modifier.padding(bottom = 32.dp))
