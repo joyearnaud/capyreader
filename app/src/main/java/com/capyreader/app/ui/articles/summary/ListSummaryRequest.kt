@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter
 fun buildListSummaryRequest(
     scopeLabel: String,
     entries: List<DigestEntry>,
+    systemPrompt: String,
 ): SummaryRequest {
     val zone = ZoneId.systemDefault()
     val formatter = DateTimeFormatter.ISO_LOCAL_DATE
@@ -31,7 +32,7 @@ fun buildListSummaryRequest(
     }
 
     return SummaryRequest(
-        systemPrompt = AppPreferences.AiOptions.DEFAULT_LIST_PROMPT,
+        systemPrompt = systemPrompt,
         title = scopeLabel,
         text = text,
         thinkingDisabled = true,

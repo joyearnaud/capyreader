@@ -48,8 +48,12 @@ fun AiSettingsPanel(
         updateApiKey = viewModel::updateApiKey,
         prompt = viewModel.prompt,
         updatePrompt = viewModel::updatePrompt,
+        listPrompt = viewModel.listPrompt,
+        updateListPrompt = viewModel::updateListPrompt,
         listDigestCacheEnabled = viewModel.listDigestCacheEnabled,
         updateListDigestCacheEnabled = viewModel::updateListDigestCacheEnabled,
+        articleSummaryCacheEnabled = viewModel.articleSummaryCacheEnabled,
+        updateArticleSummaryCacheEnabled = viewModel::updateArticleSummaryCacheEnabled,
     )
 }
 
@@ -63,14 +67,19 @@ fun AiSettingsPanelView(
     updateApiKey: (String) -> Unit,
     prompt: String,
     updatePrompt: (String) -> Unit,
+    listPrompt: String,
+    updateListPrompt: (String) -> Unit,
     listDigestCacheEnabled: Boolean,
     updateListDigestCacheEnabled: (Boolean) -> Unit,
+    articleSummaryCacheEnabled: Boolean,
+    updateArticleSummaryCacheEnabled: (Boolean) -> Unit,
 ) {
     val (showApiKey, setApiKeyVisibility) = rememberSaveable {
         mutableStateOf(false)
     }
 
     var showRestoreDialog by rememberSaveable { mutableStateOf(false) }
+    var showRestoreListDialog by rememberSaveable { mutableStateOf(false) }
 
     val apiKeyTransformation = if (showApiKey) {
         VisualTransformation.None
@@ -178,16 +187,59 @@ fun AiSettingsPanelView(
                     title = stringResource(R.string.settings_ai_list_cache),
                     subtitle = stringResource(R.string.settings_ai_list_cache_subtitle),
                 )
+                TextSwitch(
+                    checked = articleSummaryCacheEnabled,
+                    onCheckedChange = updateArticleSummaryCacheEnabled,
+                    title = stringResource(R.string.settings_ai_article_cache),
+                    subtitle = stringResource(R.string.settings_ai_article_cache_subtitle),
+                )
+            }
+        }
+
+        FormSection(title = stringResource(R.string.settings_section_ai_list_prompt)) {
+            RowItem {
+                TextField(
+                    value = listPrompt,
+                    onValueChange = updateListPrompt,
+                    label = {
+                        Text(stringResource(R.string.settings_ai_list_prompt))
+                    },
+                    minLines = 4,
+                    keyboardOptions = KeyboardOptions(
+                        autoCorrectEnabled = false,
+                        capitalization = KeyboardCapitalization.Sentences,
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TextButton(onClick = { showRestoreListDialog = true }) {
+                    Text(stringResource(R.string.settings_ai_list_restore))
+                }
             }
         }
 
         if (showRestoreDialog) {
             RestorePromptDialog(
+                titleRes = R.string.settings_ai_restore_prompt_title,
+                messageRes = R.string.settings_ai_restore_prompt_text,
+                confirmRes = R.string.settings_ai_restore_prompt_confirm,
                 onConfirm = {
                     updatePrompt(AppPreferences.AiOptions.DEFAULT_PROMPT)
                     showRestoreDialog = false
                 },
                 onDismissRequest = { showRestoreDialog = false },
+            )
+        }
+
+        if (showRestoreListDialog) {
+            RestorePromptDialog(
+                titleRes = R.string.settings_ai_list_restore_title,
+                messageRes = R.string.settings_ai_list_restore_text,
+                confirmRes = R.string.settings_ai_restore_prompt_confirm,
+                onConfirm = {
+                    updateListPrompt(AppPreferences.AiOptions.DEFAULT_LIST_PROMPT)
+                    showRestoreListDialog = false
+                },
+                onDismissRequest = { showRestoreListDialog = false },
             )
         }
     }
@@ -206,8 +258,12 @@ private fun AiSettingsPanelViewPreview() {
             updateApiKey = {},
             prompt = "Résume cet article en français.",
             updatePrompt = {},
+            listPrompt = "Résume cette liste en français.",
+            updateListPrompt = {},
             listDigestCacheEnabled = true,
             updateListDigestCacheEnabled = {},
+            articleSummaryCacheEnabled = true,
+            updateArticleSummaryCacheEnabled = {},
         )
     }
 }

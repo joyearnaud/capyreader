@@ -83,7 +83,7 @@ fun rememberSummary(
             activeJob = scope.launch {
                 holder.state = SummaryUiState(isLoading = true)
 
-                if (!forceRefresh) {
+                if (appPreferences.aiOptions.articleSummaryCacheEnabled.get() && !forceRefresh) {
                     val cached = account.findSummary(
                         articleID = target.id,
                         providerKey = providerKey,
@@ -110,13 +110,15 @@ fun rememberSummary(
                         summaryClient.summarizeStreaming(request).collect { streamed = it }
                         full = streamed
                         streamed?.let {
-                            runCatching {
-                                account.upsertSummary(
-                                    articleID = target.id,
-                                    providerKey = providerKey,
-                                    promptHash = hash,
-                                    content = it,
-                                )
+                            if (appPreferences.aiOptions.articleSummaryCacheEnabled.get()) {
+                                runCatching {
+                                    account.upsertSummary(
+                                        articleID = target.id,
+                                        providerKey = providerKey,
+                                        promptHash = hash,
+                                        content = it,
+                                    )
+                                }
                             }
                         }
                     } catch (e: CancellationException) {

@@ -154,6 +154,12 @@ class AppPreferences(context: Context) {
         val listDigestCacheEnabled: Preference<Boolean>
             get() = preferenceStore.getBoolean("ai_list_digest_cache_enabled", true)
 
+        val articleSummaryCacheEnabled: Preference<Boolean>
+            get() = preferenceStore.getBoolean("ai_article_cache_enabled", true)
+
+        val listPrompt: Preference<String>
+            get() = preferenceStore.getString("ai_list_prompt", DEFAULT_LIST_PROMPT)
+
         companion object {
             const val DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
             const val DEFAULT_MODEL = "deepseek-chat"

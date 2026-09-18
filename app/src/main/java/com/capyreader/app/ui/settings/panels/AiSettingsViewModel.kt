@@ -21,12 +21,28 @@ class AiSettingsViewModel(
     var prompt by mutableStateOf(appPreferences.aiOptions.prompt.get())
         private set
 
+    var listPrompt by mutableStateOf(appPreferences.aiOptions.listPrompt.get())
+        private set
+
     var listDigestCacheEnabled by mutableStateOf(appPreferences.aiOptions.listDigestCacheEnabled.get())
         private set
+
+    var articleSummaryCacheEnabled by mutableStateOf(appPreferences.aiOptions.articleSummaryCacheEnabled.get())
+        private set
+
+    fun updateListPrompt(value: String) {
+        appPreferences.aiOptions.listPrompt.set(value)
+        listPrompt = value
+    }
 
     fun updateListDigestCacheEnabled(value: Boolean) {
         appPreferences.aiOptions.listDigestCacheEnabled.set(value)
         listDigestCacheEnabled = value
+    }
+
+    fun updateArticleSummaryCacheEnabled(value: Boolean) {
+        appPreferences.aiOptions.articleSummaryCacheEnabled.set(value)
+        articleSummaryCacheEnabled = value
     }
 
     fun updateBaseURL(value: String) {

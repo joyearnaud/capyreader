@@ -1,6 +1,7 @@
 package com.capyreader.app.ui.settings.panels
 
 
+import androidx.annotation.StringRes
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -10,12 +11,15 @@ import com.capyreader.app.R
 
 @Composable
 fun RestorePromptDialog(
+    @StringRes titleRes: Int,
+    @StringRes messageRes: Int,
+    @StringRes confirmRes: Int,
     onConfirm: () -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
 ) {
-    val title = stringResource(R.string.settings_ai_restore_prompt_title)
-    val message = stringResource(R.string.settings_ai_restore_prompt_text)
-    val confirmText = stringResource(R.string.settings_ai_restore_prompt_confirm)
+    val title = stringResource(titleRes)
+    val message = stringResource(messageRes)
+    val confirmText = stringResource(confirmRes)
 
     AlertDialog(
         onDismissRequest = onDismissRequest,

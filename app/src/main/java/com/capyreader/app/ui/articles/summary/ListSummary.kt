@@ -47,7 +47,6 @@ fun rememberListSummary(
     var activeJob by remember { mutableStateOf<Job?>(null) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
-    val listPrompt = AppPreferences.AiOptions.DEFAULT_LIST_PROMPT
 
     val run: () -> Unit = {
         activeJob?.cancel()
@@ -55,6 +54,7 @@ fun rememberListSummary(
             holder.state = SummaryUiState(isLoading = true)
 
             try {
+                val listPrompt = appPreferences.aiOptions.listPrompt.get()
                 val fetched = withContext(Dispatchers.IO) {
                     account.findRecentForDigest(filter)
                 }
@@ -75,7 +75,7 @@ fun rememberListSummary(
                     }
                 }
 
-                val request = buildListSummaryRequest(scopeLabel, selection)
+                val request = buildListSummaryRequest(scopeLabel, selection, listPrompt)
 
                 var streamed: String? = null
                 var failure: Throwable? = null

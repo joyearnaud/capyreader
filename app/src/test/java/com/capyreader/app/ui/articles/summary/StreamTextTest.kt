@@ -1,5 +1,8 @@
 package com.capyreader.app.ui.articles.summary
 
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -93,5 +96,32 @@ class LinkifyReferencesTest {
         assertTrue(linked, !linked.contains("capysummary://article/"))
         assertTrue(linked.contains("(2026)"))
         assertTrue(linked.contains("(9)"))
+    }
+}
+
+class BuildListSummaryRequestTest {
+
+    private fun entry(id: String, day: Int) = DigestEntry(
+        id = id,
+        feedName = "Le Feed",
+        publishedAt = ZonedDateTime.of(LocalDateTime.of(2026, 9, day, 10, 0), ZoneId.systemDefault()),
+        title = "Titre $id",
+        excerpt = "extrait $id",
+    )
+
+    @Test
+    fun `numbers blocks and passes the prompt through`() {
+        val request = buildListSummaryRequest(
+            scopeLabel = "News",
+            entries = listOf(entry("b", 16), entry("a", 15)),
+            systemPrompt = "MON PROMPT",
+        )
+
+        assertEquals("MON PROMPT", request.systemPrompt)
+        assertEquals("News", request.title)
+        assertTrue(request.thinkingDisabled)
+        assertTrue(request.text, request.text.contains("(1) [2026-09-16] Le Feed — Titre b"))
+        assertTrue(request.text, request.text.contains("(2) [2026-09-15] Le Feed — Titre a"))
+        assertTrue(request.text, request.text.startsWith("2 articles from 2026-09-15 to 2026-09-16"))
     }
 }
