@@ -20,6 +20,7 @@ import org.koin.compose.koinInject
 
 class ListSummaryStateHolder {
     var state by mutableStateOf(SummaryUiState())
+    var referenceTargets by mutableStateOf(emptyList<String>())
 }
 
 class ListSummaryController(
@@ -29,6 +30,7 @@ class ListSummaryController(
     val dismiss: () -> Unit = {},
 ) {
     val state: SummaryUiState get() = holder.state
+    val referenceTargets: List<String> get() = holder.referenceTargets
 }
 
 @Composable
@@ -38,12 +40,14 @@ fun rememberListSummary(
     account: Account = koinInject(),
     summaryClient: SummaryClient = koinInject(),
     appPreferences: AppPreferences = koinInject(),
+    cache: ListSummaryCache = koinInject(),
 ): ListSummaryController {
     val scope = rememberCoroutineScope()
     val holder = remember(filter) { ListSummaryStateHolder() }
     var activeJob by remember { mutableStateOf<Job?>(null) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
+    val listPrompt = AppPreferences.AiOptions.DEFAULT_LIST_PROMPT
 
     val run: () -> Unit = {
         activeJob?.cancel()
@@ -59,6 +63,16 @@ fun rememberListSummary(
                 if (selection.isEmpty()) {
                     holder.state = SummaryUiState(error = "No articles to summarize")
                     return@launch
+                }
+
+                val targets = selection.map { it.id }
+                holder.referenceTargets = targets
+
+                if (appPreferences.aiOptions.listDigestCacheEnabled.get()) {
+                    cache.get(filter, selection, listPrompt)?.let { entry ->
+                        holder.state = SummaryUiState(text = entry.text)
+                        return@launch
+                    }
                 }
 
                 val request = buildListSummaryRequest(scopeLabel, selection)
@@ -92,9 +106,20 @@ fun rememberListSummary(
                     withFrameNanos { it }
                 }
 
+                val completed = full
                 when {
                     failure != null -> throw failure!!
-                    full != null -> holder.state = SummaryUiState(text = full)
+                    completed != null -> {
+                        if (appPreferences.aiOptions.listDigestCacheEnabled.get()) {
+                            cache.put(
+                                filter,
+                                selection,
+                                listPrompt,
+                                ListSummaryCache.Entry(text = completed, articleIds = targets),
+                            )
+                        }
+                        holder.state = SummaryUiState(text = completed)
+                    }
                     else -> holder.state = SummaryUiState(error = "Empty response from the provider")
                 }
             } catch (e: CancellationException) {

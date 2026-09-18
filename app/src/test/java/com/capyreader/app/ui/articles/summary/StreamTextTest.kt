@@ -71,3 +71,27 @@ class AdvanceDisplayedTest {
         assertEquals(5, advanceDisplayed(5, 5))
     }
 }
+
+class LinkifyReferencesTest {
+
+    @Test
+    fun `rewrites in-range markers into markdown links`() {
+        val linked = linkifyReferences("Thème A voit (1) et (2). Puis (1) encore.", listOf("a", "b"))
+
+        assertEquals(2, Regex("capysummary://article/a").findAll(linked).count())
+        assertEquals(1, Regex("capysummary://article/b").findAll(linked).count())
+        assertTrue(
+            linked,
+            linked.startsWith("Thème A voit [(1)](capysummary://article/a)"),
+        )
+    }
+
+    @Test
+    fun `out-of-range markers stay literal`() {
+        val linked = linkifyReferences("L'année (2026) et le (9).", listOf("a"))
+
+        assertTrue(linked, !linked.contains("capysummary://article/"))
+        assertTrue(linked.contains("(2026)"))
+        assertTrue(linked.contains("(9)"))
+    }
+}

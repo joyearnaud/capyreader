@@ -21,6 +21,14 @@ class AiSettingsViewModel(
     var prompt by mutableStateOf(appPreferences.aiOptions.prompt.get())
         private set
 
+    var listDigestCacheEnabled by mutableStateOf(appPreferences.aiOptions.listDigestCacheEnabled.get())
+        private set
+
+    fun updateListDigestCacheEnabled(value: Boolean) {
+        appPreferences.aiOptions.listDigestCacheEnabled.set(value)
+        listDigestCacheEnabled = value
+    }
+
     fun updateBaseURL(value: String) {
         appPreferences.aiOptions.baseURL.set(value)
         baseURL = value

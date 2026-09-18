@@ -53,6 +53,7 @@ fun ListSummarySheet(
             SummaryContent(
                 state = state,
                 modifier = Modifier.padding(top = 12.dp),
+                referenceTargets = controller.referenceTargets,
             )
 
             Spacer(Modifier.padding(bottom = 32.dp))

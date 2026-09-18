@@ -377,6 +377,8 @@
     <string name="settings_ai_restore_prompt">Restore default prompt</string>
     <string name="list_summary_action">Summarize this list</string>
     <string name="list_summary_title">Summary</string>
+    <string name="settings_ai_list_cache">Cache list digests</string>
+    <string name="settings_ai_list_cache_subtitle">Reopen a list summary instantly instead of regenerating it</string>
     <string name="settings_ai_restore_prompt_title">Restore default prompt?</string>
     <string name="settings_ai_restore_prompt_text">This replaces your current prompt with the default prompt. This cannot be undone.</string>
     <string name="settings_ai_restore_prompt_confirm">Restore</string>

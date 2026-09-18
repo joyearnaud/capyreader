@@ -358,6 +358,8 @@
     <string name="settings_ai_restore_prompt">Rétablir le prompt par défaut</string>
     <string name="list_summary_action">Résumer cette liste</string>
     <string name="list_summary_title">Résumé</string>
+    <string name="settings_ai_list_cache">Mettre en cache les résumés de liste</string>
+    <string name="settings_ai_list_cache_subtitle">Réouvrir instantanément un résumé de liste au lieu de le régénérer</string>
     <string name="settings_ai_restore_prompt_title">Rétablir le prompt par défaut ?</string>
     <string name="settings_ai_restore_prompt_text">Ceci remplace votre prompt actuel par le prompt par défaut. Action irréversible.</string>
     <string name="settings_ai_restore_prompt_confirm">Rétablir</string>

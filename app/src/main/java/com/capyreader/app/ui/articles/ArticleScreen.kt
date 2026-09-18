@@ -39,6 +39,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -709,11 +711,26 @@ fun ArticleScreen(
             }
         )
 
+        val listUriHandler = LocalUriHandler.current
+        val summaryUriHandler = remember(listUriHandler) {
+            object : UriHandler {
+                override fun openUri(uri: String) {
+                    if (uri.startsWith("capysummary://article/")) {
+                        selectArticle(uri.substringAfterLast("/"))
+                    } else {
+                        listUriHandler.openUri(uri)
+                    }
+                }
+            }
+        }
+
         if (showListSummary) {
-            ListSummarySheet(
-                controller = listSummary,
-                onDismiss = { showListSummary = false },
-            )
+            CompositionLocalProvider(LocalUriHandler provides summaryUriHandler) {
+                ListSummarySheet(
+                    controller = listSummary,
+                    onDismiss = { showListSummary = false },
+                )
+            }
         }
 
         LaunchedEffect(scaffoldNavigator.currentDestination) {

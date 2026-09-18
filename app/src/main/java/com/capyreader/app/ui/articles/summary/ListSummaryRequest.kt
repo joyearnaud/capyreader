@@ -18,11 +18,11 @@ fun buildListSummaryRequest(
             val newest = entries.first().publishedAt.withZoneSameInstant(zone).toLocalDate()
             append("${entries.size} articles from $oldest to $newest, newest first.")
         }
-        entries.forEach { entry ->
+        entries.forEachIndexed { index, entry ->
             appendLine()
             appendLine()
             val day = entry.publishedAt.withZoneSameInstant(zone).toLocalDate().format(formatter)
-            append("[$day] ${entry.feedName} — ${entry.title}")
+            append("(${index + 1}) [$day] ${entry.feedName} — ${entry.title}")
             if (entry.excerpt.isNotBlank()) {
                 appendLine()
                 append(entry.excerpt)

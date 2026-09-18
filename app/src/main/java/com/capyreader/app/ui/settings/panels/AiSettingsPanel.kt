@@ -31,6 +31,7 @@ import com.capyreader.app.R
 import com.capyreader.app.common.RowItem
 import com.capyreader.app.preferences.AppPreferences
 import com.capyreader.app.ui.components.FormSection
+import com.capyreader.app.ui.components.TextSwitch
 import com.capyreader.app.ui.theme.CapyTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -47,6 +48,8 @@ fun AiSettingsPanel(
         updateApiKey = viewModel::updateApiKey,
         prompt = viewModel.prompt,
         updatePrompt = viewModel::updatePrompt,
+        listDigestCacheEnabled = viewModel.listDigestCacheEnabled,
+        updateListDigestCacheEnabled = viewModel::updateListDigestCacheEnabled,
     )
 }
 
@@ -60,6 +63,8 @@ fun AiSettingsPanelView(
     updateApiKey: (String) -> Unit,
     prompt: String,
     updatePrompt: (String) -> Unit,
+    listDigestCacheEnabled: Boolean,
+    updateListDigestCacheEnabled: (Boolean) -> Unit,
 ) {
     val (showApiKey, setApiKeyVisibility) = rememberSaveable {
         mutableStateOf(false)
@@ -167,6 +172,12 @@ fun AiSettingsPanelView(
                 TextButton(onClick = { showRestoreDialog = true }) {
                     Text(stringResource(R.string.settings_ai_restore_prompt))
                 }
+                TextSwitch(
+                    checked = listDigestCacheEnabled,
+                    onCheckedChange = updateListDigestCacheEnabled,
+                    title = stringResource(R.string.settings_ai_list_cache),
+                    subtitle = stringResource(R.string.settings_ai_list_cache_subtitle),
+                )
             }
         }
 
@@ -195,6 +206,8 @@ private fun AiSettingsPanelViewPreview() {
             updateApiKey = {},
             prompt = "Résume cet article en français.",
             updatePrompt = {},
+            listDigestCacheEnabled = true,
+            updateListDigestCacheEnabled = {},
         )
     }
 }

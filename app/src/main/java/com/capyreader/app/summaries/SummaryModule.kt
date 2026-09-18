@@ -1,6 +1,7 @@
 package com.capyreader.app.summaries
 
 import com.capyreader.app.preferences.AppPreferences
+import com.capyreader.app.ui.articles.summary.ListSummaryCache
 import com.jocmp.aiclient.OpenAiCompatibleClient
 import com.jocmp.aiclient.ProviderConfig
 import com.jocmp.aiclient.SummaryClient
@@ -9,6 +10,7 @@ import org.koin.dsl.module
 import java.time.Duration
 
 val summaryModule = module {
+    single { ListSummaryCache() }
     single<SummaryClient> {
         val appPreferences: AppPreferences = get()
 
