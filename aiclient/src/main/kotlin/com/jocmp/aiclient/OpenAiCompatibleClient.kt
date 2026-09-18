@@ -84,13 +84,12 @@ internal fun summaryError(status: Int, body: String): SummaryException {
     return SummaryException(message ?: "Provider error (HTTP $status)")
 }
 
+/** DeepSeek v3.2 is a hybrid that thinks by default and expects this exact
+ *  field; Z.ai honors it too — send it unconditionally when asked. */
 internal fun thinkingField(request: SummaryRequest, baseURL: String): ThinkingConfig? {
     if (!request.thinkingDisabled) return null
 
-    val isZai = baseURL.contains("z.ai", ignoreCase = true) ||
-            baseURL.contains("bigmodel.cn", ignoreCase = true)
-
-    return if (isZai) ThinkingConfig(type = "disabled") else null
+    return ThinkingConfig(type = "disabled")
 }
 
 class OpenAiCompatibleClient(

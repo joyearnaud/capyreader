@@ -25,6 +25,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,6 +57,19 @@ fun ListSummarySheet(
     if (!state.isVisible) return
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
+        val scrollState = rememberScrollState()
+
+        // Chat-style follow: while streaming, keep the viewport pinned to the
+        // bottom (only when the reader is already near it) so the growth
+        // happens below the fold instead of flickering at the screen edge.
+        LaunchedEffect(state.text, state.streamTail) {
+            if (state.streamTail != null && !state.isLoading) {
+                if (scrollState.maxValue - scrollState.value < 240) {
+                    scrollState.scrollTo(scrollState.maxValue)
+                }
+            }
+        }
+
         val defaultUriHandler = LocalUriHandler.current
         val uriHandler = remember(defaultUriHandler) {
             object : UriHandler {
@@ -74,7 +88,7 @@ fun ListSummarySheet(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 200.dp, max = 560.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +109,7 @@ fun ListSummarySheet(
 
                 AnimatedVisibility(
                     visible = state.text != null || state.error != null,
-                    enter = fadeIn(tween(220)) + expandVertically(tween(220)),
+                    enter = fadeIn(tween(220)),
                 ) {
                     SummaryContent(
                         state = state,

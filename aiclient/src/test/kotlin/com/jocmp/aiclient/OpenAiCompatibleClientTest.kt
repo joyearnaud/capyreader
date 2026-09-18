@@ -303,7 +303,10 @@ class ThinkingFieldTest {
             ThinkingConfig(type = "disabled"),
             thinkingField(request, "https://open.bigmodel.cn/api/paas/v4"),
         )
-        assertEquals(null, thinkingField(request, "https://api.deepseek.com/v1"))
+        assertEquals(
+            ThinkingConfig(type = "disabled"),
+            thinkingField(request, "https://api.deepseek.com/v1"),
+        )
         assertEquals(null, thinkingField(SummaryRequest(systemPrompt = "p", title = "t", text = "b"), "https://api.z.ai/api/coding/paas/v4"))
     }
 }
