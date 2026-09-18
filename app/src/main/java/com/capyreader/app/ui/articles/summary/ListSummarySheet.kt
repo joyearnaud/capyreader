@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -27,6 +29,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DoneAll
 import com.capyreader.app.R
 
 /**
@@ -40,6 +44,7 @@ fun ListSummarySheet(
     controller: ListSummaryController,
     onDismiss: () -> Unit,
     onOpenArticle: (String) -> Unit,
+    onMarkAllRead: () -> Unit,
 ) {
     val state = controller.state
     if (!state.isVisible) return
@@ -82,6 +87,24 @@ fun ListSummarySheet(
                     modifier = Modifier.padding(top = 12.dp),
                     referenceTargets = controller.referenceTargets,
                 )
+
+                Spacer(Modifier.heightIn(min = 8.dp))
+
+                Button(
+                    onClick = {
+                        onMarkAllRead()
+                        onDismiss()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.DoneAll,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_mark_all_read))
+                }
 
                 Spacer(Modifier.padding(bottom = 32.dp))
             }

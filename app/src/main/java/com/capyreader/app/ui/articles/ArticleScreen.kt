@@ -716,6 +716,7 @@ fun ArticleScreen(
                 controller = listSummary,
                 onDismiss = { showListSummary = false },
                 onOpenArticle = { selectArticle(it) },
+                onMarkAllRead = { markAllRead(MarkRead.All) },
             )
         }
 

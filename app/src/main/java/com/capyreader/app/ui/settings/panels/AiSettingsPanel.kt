@@ -163,6 +163,23 @@ fun AiSettingsPanelView(
             }
         }
 
+        FormSection(title = stringResource(R.string.settings_section_ai_caches)) {
+            RowItem {
+                TextSwitch(
+                    checked = listDigestCacheEnabled,
+                    onCheckedChange = updateListDigestCacheEnabled,
+                    title = stringResource(R.string.settings_ai_list_cache),
+                    subtitle = stringResource(R.string.settings_ai_list_cache_subtitle),
+                )
+                TextSwitch(
+                    checked = articleSummaryCacheEnabled,
+                    onCheckedChange = updateArticleSummaryCacheEnabled,
+                    title = stringResource(R.string.settings_ai_article_cache),
+                    subtitle = stringResource(R.string.settings_ai_article_cache_subtitle),
+                )
+            }
+        }
+
         FormSection(title = stringResource(R.string.settings_section_ai_prompt)) {
             RowItem {
                 TextField(
@@ -181,18 +198,6 @@ fun AiSettingsPanelView(
                 TextButton(onClick = { showRestoreDialog = true }) {
                     Text(stringResource(R.string.settings_ai_restore_prompt))
                 }
-                TextSwitch(
-                    checked = listDigestCacheEnabled,
-                    onCheckedChange = updateListDigestCacheEnabled,
-                    title = stringResource(R.string.settings_ai_list_cache),
-                    subtitle = stringResource(R.string.settings_ai_list_cache_subtitle),
-                )
-                TextSwitch(
-                    checked = articleSummaryCacheEnabled,
-                    onCheckedChange = updateArticleSummaryCacheEnabled,
-                    title = stringResource(R.string.settings_ai_article_cache),
-                    subtitle = stringResource(R.string.settings_ai_article_cache_subtitle),
-                )
             }
         }
 

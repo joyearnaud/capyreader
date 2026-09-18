@@ -379,6 +379,7 @@
     <string name="list_summary_title">Summary</string>
     <string name="settings_ai_list_cache">Cache list digests</string>
     <string name="settings_ai_list_cache_subtitle">Reopen a list summary instantly instead of regenerating it</string>
+    <string name="settings_section_ai_caches">Summary caching</string>
     <string name="settings_ai_article_cache">Cache article summaries</string>
     <string name="settings_ai_article_cache_subtitle">Reuse a summary when reopening an article instead of calling the provider</string>
     <string name="settings_section_ai_list_prompt">List summary prompt</string>

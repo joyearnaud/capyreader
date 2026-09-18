@@ -24,6 +24,8 @@ fun buildListSummaryRequest(
             appendLine()
             val day = entry.publishedAt.withZoneSameInstant(zone).toLocalDate().format(formatter)
             append("(${index + 1}) [$day] ${entry.feedName} — ${entry.title}")
+            appendLine()
+            append("article link: capysummary://article/${entry.id}")
             if (entry.excerpt.isNotBlank()) {
                 appendLine()
                 append(entry.excerpt)
