@@ -98,10 +98,8 @@ fun rememberListSummary(
                     val current = streamed
                     if (current != null && current.length > displayed) {
                         displayed = advanceDisplayed(displayed, current.length)
-                        val (stable, tail) = splitStreamText(current.substring(0, displayed))
                         holder.state = SummaryUiState(
-                            text = stable,
-                            streamTail = tail.ifBlank { null },
+                            streamText = current.substring(0, displayed),
                         )
                     }
                     withFrameNanos { it }

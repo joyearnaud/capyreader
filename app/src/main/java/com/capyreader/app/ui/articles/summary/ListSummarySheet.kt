@@ -99,7 +99,7 @@ fun ListSummarySheet(
                 }
 
                 AnimatedVisibility(
-                    visible = state.text != null || state.error != null,
+                    visible = state.text != null || state.streamText != null || state.error != null,
                     enter = fadeIn(tween(220)),
                 ) {
                     SummaryContent(
@@ -112,7 +112,7 @@ fun ListSummarySheet(
                 Spacer(Modifier.height(20.dp))
 
                 val generationComplete = state.text != null &&
-                        state.streamTail == null &&
+                        state.streamText == null &&
                         !state.isLoading &&
                         state.error == null
                 AnimatedVisibility(visible = generationComplete) {

@@ -10,49 +10,31 @@ import org.junit.Test
 class StreamTextTest {
 
     @Test
-    fun `splits at the last blank line`() {
-        val (stable, tail) = splitStreamText("First block.\n\nSecond block.\n\nThird is being writ")
-
-        assertEquals("First block.\n\nSecond block.", stable)
-        assertEquals("Third is being writ", tail)
-    }
-
-    @Test
-    fun `keeps everything in the tail before any blank line`() {
-        val (stable, tail) = splitStreamText("An opening line still being writ")
-
-        assertEquals("", stable)
-        assertEquals("An opening line still being writ", tail)
-    }
-
-    @Test
-    fun `tail is empty when text ends on a blank line`() {
-        val (stable, tail) = splitStreamText("First block.\n\n")
-
-        assertEquals("First block.", stable)
-        assertEquals("", tail)
-    }
-
-    @Test
-    fun `normalizes CRLF before splitting`() {
-        val (stable, tail) = splitStreamText("First block.\r\n\r\nSecond tail")
-
-        assertEquals("First block.", stable)
-        assertEquals("Second tail", tail)
-    }
-
-    @Test
-    fun `strips inline and line-start markers from the tail`() {
-        val stripped = stripStreamTailMarkers("**Bold** and `code`\n# Head\n> q\n- item stays")
+    fun `strips inline and line-start markers`() {
+        val stripped = stripStreamMarkers("**Bold** and `code`\n# Head\n> q\n- item stays")
 
         assertEquals("Bold and code\nHead\nq\n- item stays", stripped)
     }
 
     @Test
     fun `strips partial table pipes`() {
-        val stripped = stripStreamTailMarkers("| col")
+        val stripped = stripStreamMarkers("| col")
 
-        assertTrue(!stripped.contains("|"))
+        assertTrue(stripped, !stripped.contains("|"))
+    }
+
+    @Test
+    fun `collapses citation links to their number`() {
+        val stripped = stripStreamMarkers("Voir [[2]](capysummary://article/abc-123) et [[1]](https://x.y)")
+
+        assertEquals("Voir (2) et (1)", stripped)
+    }
+
+    @Test
+    fun `collapses generic links to their label`() {
+        val stripped = stripStreamMarkers("Une [source](https://example.com) fiable")
+
+        assertEquals("Une source fiable", stripped)
     }
 }
 

@@ -1,5 +1,6 @@
 package com.capyreader.app.ui.articles.summary
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
@@ -24,10 +25,12 @@ import com.mikepenz.markdown.m3.markdownTypography
 import org.koin.compose.koinInject
 
 /**
- * The streamed summary body: per-block Markdown plus the plain stripped
- * tail, shared by the article card and the list digest sheet.
- * Reference markers like (1) become markdown links to
- * capysummary://article/<id> when [referenceTargets] maps them.
+ * The streamed summary body, shared by the article card and the list digest
+ * sheet. While streaming: one plain, marker-stripped Text — nothing converts
+ * mid-stream, so the layout can only grow. On completion: a crossfade to the
+ * per-block Markdown render (one Markdown per block: the renderer flips to an
+ * async Loading state — rendered as nothing — whenever its content changes,
+ * so a single growing Markdown call flashes the card shut every tick).
  */
 @Composable
 fun SummaryContent(
@@ -39,9 +42,9 @@ fun SummaryContent(
     val readerFontFamily by appPreferences.readerOptions.fontFamily.collectChangesWithDefault()
     val readerFontSize by appPreferences.readerOptions.fontSize.collectChangesWithDefault()
 
-    // Match the article reader: its font family and its body size (CSS px ~
-    // sp at unit scale; sp keeps system font-scale accessibility for app UI).
-    // Headings scale by the same ratio so they never sink below the body.
+    // Match the article reader: its font family and body size (CSS px ~ sp;
+    // sp keeps system font-scale accessibility). Headings scale by the same
+    // ratio so they never sink below the body.
     val family = readerFontFamily.toFontFamily() ?: FontFamily.Default
     val ratio = readerFontSize / FontSize.DEFAULT.toFloat()
     val body = MaterialTheme.typography.bodyLarge.copy(
@@ -49,53 +52,53 @@ fun SummaryContent(
         fontSize = readerFontSize.sp,
         lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * ratio,
     )
-    val heading = MaterialTheme.typography.titleMedium.copy(
+    val heading = MaterialTheme.typography.titleLarge.copy(
         fontFamily = family,
-        fontSize = MaterialTheme.typography.titleMedium.fontSize * ratio,
-        lineHeight = MaterialTheme.typography.titleMedium.lineHeight * ratio,
+        fontSize = MaterialTheme.typography.titleLarge.fontSize * ratio,
+        lineHeight = MaterialTheme.typography.titleLarge.lineHeight * ratio,
     )
 
     Column(modifier) {
-        state.text?.let { raw ->
-            // One Markdown per block: the renderer flips to an async Loading
-            // state (rendered as nothing) whenever its content string changes,
-            // so a single growing Markdown call flashes the card shut every
-            // tick. A completed block's string never changes, hitting the
-            // early-return cache instead; only the newest block parses.
-            val typography = markdownTypography(
-                text = body,
-                paragraph = body,
-                list = body,
-                h1 = heading,
-                h2 = heading,
-                h3 = body.copy(fontWeight = FontWeight.SemiBold),
-                h4 = body.copy(fontWeight = FontWeight.SemiBold),
-                h5 = body.copy(fontWeight = FontWeight.SemiBold),
-                h6 = body.copy(fontWeight = FontWeight.SemiBold),
-                quote = body.copy(fontStyle = FontStyle.Italic),
-                textLink = TextLinkStyles(
-                    style = SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline,
-                    ),
-                ),
-            )
+        Crossfade(
+            targetState = state.streamText != null,
+            label = "summary-body",
+        ) { streaming ->
+            if (streaming) {
+                Text(
+                    text = stripStreamMarkers(state.streamText.orEmpty()),
+                    style = body,
+                )
+            } else {
+                state.text?.let {
+                    val typography = markdownTypography(
+                        text = body,
+                        paragraph = body,
+                        list = body,
+                        h1 = heading,
+                        h2 = heading,
+                        h3 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h4 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h5 = body.copy(fontWeight = FontWeight.SemiBold),
+                        h6 = body.copy(fontWeight = FontWeight.SemiBold),
+                        quote = body.copy(fontStyle = FontStyle.Italic),
+                        textLink = TextLinkStyles(
+                            style = SpanStyle(
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                        ),
+                    )
 
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                linkifyReferences(raw, referenceTargets)
-                    .split(Regex("\n\n+"))
-                    .filter { block -> block.isNotBlank() }
-                    .forEach { block ->
-                        Markdown(block, typography = typography)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        linkifyReferences(it, referenceTargets)
+                            .split(Regex("\n\n+"))
+                            .filter { block -> block.isNotBlank() }
+                            .forEach { block ->
+                                Markdown(block, typography = typography)
+                            }
                     }
+                }
             }
-        }
-
-        state.streamTail?.takeIf { it.isNotBlank() }?.let { tail ->
-            Text(
-                text = stripStreamTailMarkers(tail),
-                style = body,
-            )
         }
 
         state.error?.let {
@@ -108,14 +111,25 @@ fun SummaryContent(
     }
 }
 
-private val REFERENCE_MARKER = Regex("\\((\\d{1,3})\\)")
+private val BARE_REFERENCE = Regex("""\((\d{1,3})\)""")
+private val CITATION_MARKER = Regex("""\[\[?(\d{1,3})\]?\]\([^)]*\)""")
+private val GENERIC_LINK = Regex("""\[([^\]]*)\]\([^)]*\)""")
 
-/** Rewrite (n) markers into markdown links to capysummary://article/<id>;
- *  unknown or out-of-range numbers stay literal. */
+/** Flatten the raw cumulative text for plain display: citation links
+ *  [[1]](url) collapse to (1), other links to their label, then cheap
+ *  inline and line-start markers are stripped. */
+fun stripStreamMarkers(text: String): String =
+    text.replace(CITATION_MARKER) { "(${it.groupValues[1]})" }
+        .replace(GENERIC_LINK) { it.groupValues[1] }
+        .replace(Regex("[*`|]"), "")
+        .replace(Regex("(?m)^[#>]+\\s*"), "")
+
+/** Rewrite bare (n) reference markers into markdown links to
+ *  capysummary://article/<id>; already-linked or unknown numbers stay as-is. */
 fun linkifyReferences(text: String, targets: List<String>): String {
     if (targets.isEmpty()) return text
 
-    return REFERENCE_MARKER.replace(text) { match ->
+    return BARE_REFERENCE.replace(text) { match ->
         val index = match.groupValues[1].toInt()
         val id = targets.getOrNull(index - 1)
 

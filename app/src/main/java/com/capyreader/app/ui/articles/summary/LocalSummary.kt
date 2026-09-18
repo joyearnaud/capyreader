@@ -24,12 +24,13 @@ val LocalSummary = compositionLocalOf { SummaryController() }
 
 data class SummaryUiState(
     val text: String? = null,
-    val streamTail: String? = null,
+    val streamText: String? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val isTruncated: Boolean = false,
 ) {
-    val isVisible: Boolean get() = isLoading || text != null || error != null
+    val isVisible: Boolean
+        get() = isLoading || text != null || streamText != null || error != null
 }
 
 class SummaryStateHolder {
@@ -135,10 +136,8 @@ fun rememberSummary(
                     val current = streamed
                     if (current != null && current.length > displayed) {
                         displayed = advanceDisplayed(displayed, current.length)
-                        val (stable, tail) = splitStreamText(current.substring(0, displayed))
                         holder.state = SummaryUiState(
-                            text = stable,
-                            streamTail = tail.ifBlank { null },
+                            streamText = current.substring(0, displayed),
                             isTruncated = truncated,
                         )
                     }
@@ -183,29 +182,6 @@ internal fun advanceDisplayed(displayed: Int, targetLength: Int): Int {
 
     return displayed + minOf(step, remaining)
 }
-
-/**
- * Complete blocks vs the block still being written: markdown syntax only
- * closes once per block, so rendering the stable prefix through the markdown
- * renderer never reflows already-shown text.
- */
-fun splitStreamText(cumulative: String): Pair<String, String> {
-    val normalized = cumulative.replace("\r\n", "\n")
-    val index = normalized.lastIndexOf("\n\n")
-
-    return if (index == -1) {
-        "" to normalized
-    } else {
-        normalized.substring(0, index) to normalized.substring(index + 2)
-    }
-}
-
-/** Cheap marker removal for the plain-text tail: inline markers anywhere,
- *  line-start markers at line starts only. Worst case is one stray marker
- *  for a single render tick. */
-fun stripStreamTailMarkers(tail: String): String =
-    tail.replace(Regex("[*`|]"), "")
-        .replace(Regex("(?m)^[#>]+\\s*"), "")
 
 private fun promptHash(prompt: String): String =
     MessageDigest.getInstance("SHA-256")
