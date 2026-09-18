@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -91,12 +92,13 @@ fun ListSummarySheet(
                         text = stringResource(R.string.list_summary_title),
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    AnimatedVisibility(
-                        visible = state.isLoading,
-                        exit = fadeOut() + shrinkVertically(),
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Box(Modifier.size(16.dp)) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = state.isLoading,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                        ) {
                             CircularProgressIndicator(Modifier.size(16.dp))
                         }
                     }

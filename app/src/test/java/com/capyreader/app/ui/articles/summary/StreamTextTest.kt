@@ -107,3 +107,26 @@ class BuildListSummaryRequestTest {
         assertTrue(request.text, request.text.startsWith("2 articles from 2026-09-15 to 2026-09-16"))
     }
 }
+
+class PartialLinkTest {
+
+    @Test
+    fun `hides a half-streamed citation until it closes`() {
+        assertEquals("Voir ", stripStreamMarkers("Voir [[2]](capysummary://article/ab"))
+    }
+
+    @Test
+    fun `hides an unclosed open paren`() {
+        assertEquals("Voir ", stripStreamMarkers("Voir [[1]]("))
+    }
+
+    @Test
+    fun `hides an unclosed label bracket`() {
+        assertEquals("une ", stripStreamMarkers("une [sou"))
+    }
+
+    @Test
+    fun `complete citations still collapse`() {
+        assertEquals("Voir (2) la", stripStreamMarkers("Voir [[2]](capysummary://article/x) la"))
+    }
+}

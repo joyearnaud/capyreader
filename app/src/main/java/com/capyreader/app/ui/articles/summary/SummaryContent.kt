@@ -115,14 +115,26 @@ private val BARE_REFERENCE = Regex("""\((\d{1,3})\)""")
 private val CITATION_MARKER = Regex("""\[\[?(\d{1,3})\]?\]\([^)]*\)""")
 private val GENERIC_LINK = Regex("""\[([^\]]*)\]\([^)]*\)""")
 
-/** Flatten the raw cumulative text for plain display: citation links
- *  [[1]](url) collapse to (1), other links to their label, then cheap
- *  inline and line-start markers are stripped. */
-fun stripStreamMarkers(text: String): String =
-    text.replace(CITATION_MARKER) { "(${it.groupValues[1]})" }
+/** Flatten the raw cumulative text for plain display: completed citation
+ *  links [[1]](url) collapse to (1), other links to their label, and a
+ *  half-streamed link at the tail is hidden entirely (it would otherwise
+ *  show a raw URL that collapses when its ")" lands). */
+fun stripStreamMarkers(text: String): String {
+    val collapsed = text
+        .replace(CITATION_MARKER) { "(${it.groupValues[1]})" }
         .replace(GENERIC_LINK) { it.groupValues[1] }
+
+    val lastBracket = collapsed.lastIndexOf('[')
+    val visible = if (lastBracket >= 0 && ')' !in collapsed.substring(lastBracket)) {
+        collapsed.substring(0, lastBracket).trimEnd('[', ']')
+    } else {
+        collapsed
+    }
+
+    return visible
         .replace(Regex("[*`|]"), "")
         .replace(Regex("(?m)^[#>]+\\s*"), "")
+}
 
 /** Rewrite bare (n) reference markers into markdown links to
  *  capysummary://article/<id>; already-linked or unknown numbers stay as-is. */
