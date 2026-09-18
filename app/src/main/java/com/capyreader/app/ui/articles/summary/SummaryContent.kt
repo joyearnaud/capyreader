@@ -6,8 +6,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
@@ -43,6 +46,12 @@ fun SummaryContent(
                 h5 = body.copy(fontWeight = FontWeight.SemiBold),
                 h6 = body.copy(fontWeight = FontWeight.SemiBold),
                 quote = body.copy(fontStyle = FontStyle.Italic),
+                textLink = TextLinkStyles(
+                    style = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                    ),
+                ),
             )
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

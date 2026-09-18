@@ -711,26 +711,12 @@ fun ArticleScreen(
             }
         )
 
-        val listUriHandler = LocalUriHandler.current
-        val summaryUriHandler = remember(listUriHandler) {
-            object : UriHandler {
-                override fun openUri(uri: String) {
-                    if (uri.startsWith("capysummary://article/")) {
-                        selectArticle(uri.substringAfterLast("/"))
-                    } else {
-                        listUriHandler.openUri(uri)
-                    }
-                }
-            }
-        }
-
         if (showListSummary) {
-            CompositionLocalProvider(LocalUriHandler provides summaryUriHandler) {
-                ListSummarySheet(
-                    controller = listSummary,
-                    onDismiss = { showListSummary = false },
-                )
-            }
+            ListSummarySheet(
+                controller = listSummary,
+                onDismiss = { showListSummary = false },
+                onOpenArticle = { selectArticle(it) },
+            )
         }
 
         LaunchedEffect(scaffoldNavigator.currentDestination) {

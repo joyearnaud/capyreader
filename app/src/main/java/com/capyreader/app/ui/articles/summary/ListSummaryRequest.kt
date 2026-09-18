@@ -34,5 +34,6 @@ fun buildListSummaryRequest(
         systemPrompt = AppPreferences.AiOptions.DEFAULT_LIST_PROMPT,
         title = scopeLabel,
         text = text,
+        thinkingDisabled = true,
     )
 }

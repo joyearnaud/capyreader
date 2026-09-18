@@ -12,6 +12,7 @@ data class SummaryRequest(
     val systemPrompt: String,
     val title: String,
     val text: String,
+    val thinkingDisabled: Boolean = false,
 )
 
 interface SummaryClient {

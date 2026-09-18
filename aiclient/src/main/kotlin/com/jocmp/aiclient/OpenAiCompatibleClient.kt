@@ -20,6 +20,8 @@ import java.util.concurrent.TimeUnit
 private val json = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
+    // nullable optional fields (thinking) must never reach the wire as null
+    explicitNulls = false
 }
 
 private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
@@ -31,7 +33,11 @@ private data class ChatRequest(
     val temperature: Double,
     @SerialName("max_tokens") val maxTokens: Int,
     val stream: Boolean,
+    val thinking: ThinkingConfig? = null,
 )
+
+@Serializable
+internal data class ThinkingConfig(val type: String)
 
 @Serializable
 private data class ChatMessage(val role: String, val content: String)
@@ -78,6 +84,15 @@ internal fun summaryError(status: Int, body: String): SummaryException {
     return SummaryException(message ?: "Provider error (HTTP $status)")
 }
 
+internal fun thinkingField(request: SummaryRequest, baseURL: String): ThinkingConfig? {
+    if (!request.thinkingDisabled) return null
+
+    val isZai = baseURL.contains("z.ai", ignoreCase = true) ||
+            baseURL.contains("bigmodel.cn", ignoreCase = true)
+
+    return if (isZai) ThinkingConfig(type = "disabled") else null
+}
+
 class OpenAiCompatibleClient(
     private val httpClient: OkHttpClient,
     private val config: () -> ProviderConfig,
@@ -107,6 +122,7 @@ class OpenAiCompatibleClient(
                 temperature = temperature,
                 maxTokens = maxTokens,
                 stream = false,
+                thinking = thinkingField(request, provider.baseURL),
             )
         )
 
@@ -151,6 +167,7 @@ class OpenAiCompatibleClient(
                 temperature = temperature,
                 maxTokens = maxTokens,
                 stream = true,
+                thinking = thinkingField(request, provider.baseURL),
             )
         )
 
