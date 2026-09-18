@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import com.capyreader.app.preferences.AppPreferences
 import com.jocmp.aiclient.SummaryClient
 import com.jocmp.capy.Account
@@ -82,6 +81,9 @@ fun rememberListSummary(
                 var failure: Throwable? = null
                 var full: String? = null
 
+                // No live text in the sheet: per-frame re-layout in a
+                // ModalBottomSheet never stabilizes (5 rounds of artifacts).
+                // The collector accumulates silently; the digest lands whole.
                 val collector = launch {
                     try {
                         summaryClient.summarizeStreaming(request).collect { streamed = it }
@@ -93,17 +95,7 @@ fun rememberListSummary(
                     }
                 }
 
-                var displayed = 0
-                while (collector.isActive || displayed < (streamed?.length ?: 0)) {
-                    val current = streamed
-                    if (current != null && current.length > displayed) {
-                        displayed = advanceDisplayed(displayed, current.length)
-                        holder.state = SummaryUiState(
-                            streamText = current.substring(0, displayed),
-                        )
-                    }
-                    withFrameNanos { it }
-                }
+                collector.join()
 
                 val completed = full
                 when {

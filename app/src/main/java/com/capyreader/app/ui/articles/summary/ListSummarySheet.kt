@@ -102,6 +102,13 @@ fun ListSummarySheet(
                             CircularProgressIndicator(Modifier.size(16.dp))
                         }
                     }
+                    AnimatedVisibility(visible = state.isLoading) {
+                        Text(
+                            text = stringResource(R.string.list_summary_generating),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
 
                 AnimatedVisibility(
