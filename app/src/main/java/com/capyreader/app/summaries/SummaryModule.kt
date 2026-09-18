@@ -15,6 +15,10 @@ val summaryModule = module {
         val appPreferences: AppPreferences = get()
 
         OpenAiCompatibleClient(
+            // List digests group 50-120 articles; reasoning models think
+            // before the visible output and share this ceiling — 8192 is
+            // the max deepseek-chat accepts, and ample for glm-4.7.
+            maxTokens = 8192,
             httpClient = OkHttpClient.Builder()
                 .connectTimeout(Duration.ofSeconds(15))
                 .readTimeout(Duration.ofSeconds(120))
