@@ -362,7 +362,7 @@
     <string name="list_summary_back">Retour au résumé</string>
     <string name="list_summary_share">Partager</string>
     <string name="digest_mode_text">Choisis la portée du résumé :</string>
-    <string name="digest_mode_days">Jours récents</string>
+    <string name="digest_mode_days">Aujourd\'hui</string>
     <string name="digest_mode_all">Tout le contenu</string>
     <string name="settings_ai_list_cache">Mettre en cache les résumés de liste</string>
     <string name="settings_ai_list_cache_subtitle">Réouvrir instantanément un résumé de liste au lieu de le régénérer</string>

@@ -6,11 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import android.util.Log
 import com.capyreader.app.preferences.AppPreferences
 import com.jocmp.aiclient.SummaryClient
 import com.jocmp.capy.Account
 import com.jocmp.capy.ArticleFilter
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,6 +27,9 @@ class ListSummaryStateHolder {
     // Frozen at reference-tap time: the sheet dismissal clamps the scroll to
     // 0 frame by frame, and those teardown saves would erase the tap position.
     var scrollFrozen: Boolean = false
+    // True from sheet open until the restore effect lands — the open clamp
+    // (partial content, small max) must not overwrite the saved position.
+    var scrollRestoring: Boolean = false
 }
 
 class ListSummaryController(
@@ -45,14 +49,18 @@ class ListSummaryController(
 
     fun unfreezeScroll() {
         holder.scrollFrozen = false
+        holder.scrollRestoring = true
+    }
+
+    fun restoreDone() {
+        holder.scrollRestoring = false
     }
 
     fun saveScroll(position: Int) {
         // Frozen at reference-tap time (the dismissal clamps the scroll to 0
         // frame by frame), and 0 is never a real reading position anyway.
-        if (holder.scrollFrozen || position <= 0) return
+        if (holder.scrollFrozen || holder.scrollRestoring || position <= 0) return
 
-        Log.d("ListSummary", "saveScroll=$position")
         holder.lastScrollPosition = position
     }
 }
@@ -82,7 +90,8 @@ fun rememberListSummary(
                 val entries = withContext(Dispatchers.IO) {
                     val fetched = account.findRecentForDigest(filter)
                     if (dayWindow) {
-                        selectDigestArticles(fetched)
+                        val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toEpochSecond()
+                        fetched.filter { it.publishedAt.toEpochSecond() >= todayStart }
                     } else {
                         fetched
                     }.map { buildDigestEntry(it) }

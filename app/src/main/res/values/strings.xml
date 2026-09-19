@@ -381,7 +381,7 @@
     <string name="list_summary_back">Back to summary</string>
     <string name="list_summary_share">Share</string>
     <string name="digest_mode_text">Choose the scope of the digest:</string>
-    <string name="digest_mode_days">Recent days</string>
+    <string name="digest_mode_days">Today</string>
     <string name="digest_mode_all">Everything</string>
     <string name="settings_ai_list_cache">Cache list digests</string>
     <string name="settings_ai_list_cache_subtitle">Reopen a list summary instantly instead of regenerating it</string>

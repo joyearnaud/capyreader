@@ -89,8 +89,12 @@ fun ListSummarySheet(
         // position with 0), and the restore polls until the laid-out height
         // reaches it, then jumps.
         LaunchedEffect(scrollState) {
+            controller.unfreezeScroll()
             snapshotFlow { scrollState.value }.collect { value ->
-                if (state.text != null) {
+                // controller.state is a live getter — the local `state` val is
+                // captured once here and goes stale (text=null) after the
+                // digest lands, which silently killed every save.
+                if (controller.state.text != null) {
                     controller.saveScroll(value)
                 }
             }
@@ -98,7 +102,10 @@ fun ListSummarySheet(
 
         LaunchedEffect(controller.savedScroll) {
             val target = controller.savedScroll
-            if (target <= 0) return@LaunchedEffect
+            if (target <= 0) {
+                controller.restoreDone()
+                return@LaunchedEffect
+            }
 
             val deadline = System.nanoTime() + 5_000_000_000L
             while (coroutineContext.isActive && System.nanoTime() < deadline) {
@@ -109,6 +116,7 @@ fun ListSummarySheet(
                 withFrameNanos { }
             }
             scrollState.scrollTo(minOf(target, scrollState.maxValue))
+            controller.restoreDone()
         }
 
         val defaultUriHandler = LocalUriHandler.current
