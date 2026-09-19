@@ -12,10 +12,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -32,21 +34,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import android.content.Intent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.Share
 import com.capyreader.app.R
 
 /**
@@ -68,9 +76,15 @@ fun ListSummarySheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         // Top-anchored: verticalScroll is px-anchored, so the growing text
         // simply extends below the fold — no follow, no jump.
-        val scrollState = rememberScrollState()
+        // The position survives close/reopen (link taps): saved per scroll
+        // frame on the holder (plain var), applied at creation.
+        val scrollState = rememberScrollState(initial = controller.savedScroll)
+        LaunchedEffect(scrollState) {
+            snapshotFlow { scrollState.value }.collect { controller.saveScroll(it) }
+        }
 
         val defaultUriHandler = LocalUriHandler.current
+        val context = LocalContext.current
         val uriHandler = remember(defaultUriHandler) {
             object : UriHandler {
                 override fun openUri(uri: String) {
@@ -100,7 +114,10 @@ fun ListSummarySheet(
                         text = stringResource(R.string.list_summary_title),
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    AnimatedVisibility(visible = state.isLoading) {
+                    AnimatedVisibility(
+                        visible = state.isLoading,
+                        modifier = Modifier.weight(1f),
+                    ) {
                         val pulse by rememberInfiniteTransition(label = "skeleton").animateFloat(
                             initialValue = 0.4f,
                             targetValue = 1f,
@@ -113,9 +130,10 @@ fun ListSummarySheet(
 
                         Column(
                             Modifier
-                                .fillMaxWidth()
-                                .padding(top = 24.dp),
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
                             CircularProgressIndicator(Modifier.size(28.dp))
                             Spacer(Modifier.height(16.dp))
@@ -161,20 +179,45 @@ fun ListSummarySheet(
                         !state.isLoading &&
                         state.error == null
                 AnimatedVisibility(visible = generationComplete) {
-                    Button(
-                        onClick = {
-                            onMarkAllRead()
-                            onDismiss()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.DoneAll,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.action_mark_all_read))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        TextButton(
+                            onClick = {
+                                val text = listOfNotNull(
+                                    state.text?.let { stripStreamMarkers(it) },
+                                    controller.shareSources.takeIf { it.isNotBlank() },
+                                ).joinToString("\n\n")
+
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                }
+                                context.startActivity(Intent.createChooser(intent, null))
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.list_summary_share))
+                        }
+                        Button(
+                            onClick = {
+                                onMarkAllRead()
+                                onDismiss()
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DoneAll,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.action_mark_all_read))
+                        }
                     }
                 }
 

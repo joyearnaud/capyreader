@@ -10,6 +10,7 @@ data class DigestEntry(
     val publishedAt: ZonedDateTime,
     val title: String,
     val excerpt: String,
+    val url: String? = null,
 )
 
 private const val MAX_EXCERPT_CHARS = 220
@@ -37,5 +38,6 @@ fun buildDigestEntry(article: Article): DigestEntry {
         publishedAt = article.publishedAt,
         title = article.title,
         excerpt = excerpt,
+        url = article.url?.toString(),
     )
 }

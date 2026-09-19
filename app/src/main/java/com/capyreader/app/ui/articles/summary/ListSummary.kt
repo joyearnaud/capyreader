@@ -20,6 +20,8 @@ import org.koin.compose.koinInject
 class ListSummaryStateHolder {
     var state by mutableStateOf(SummaryUiState())
     var referenceTargets by mutableStateOf(emptyList<String>())
+    var lastScrollPosition: Int = 0
+    var shareSources: String = ""
 }
 
 class ListSummaryController(
@@ -30,6 +32,12 @@ class ListSummaryController(
 ) {
     val state: SummaryUiState get() = holder.state
     val referenceTargets: List<String> get() = holder.referenceTargets
+    val savedScroll: Int get() = holder.lastScrollPosition
+    val shareSources: String get() = holder.shareSources
+
+    fun saveScroll(position: Int) {
+        holder.lastScrollPosition = position
+    }
 }
 
 @Composable
@@ -66,6 +74,9 @@ fun rememberListSummary(
 
                 val targets = entries.map { it.id }
                 holder.referenceTargets = targets
+                holder.shareSources = entries.mapIndexed { index, entry ->
+                    "(${index + 1}) ${entry.title}" + (entry.url?.let { " — $it" } ?: "")
+                }.joinToString("\n")
 
                 val cacheEnabled = appPreferences.aiOptions.listDigestCacheEnabled.get()
                 if (cacheEnabled) {
