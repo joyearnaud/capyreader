@@ -43,6 +43,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import android.content.Intent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +83,19 @@ fun ListSummarySheet(
         val scrollState = rememberScrollState(initial = controller.savedScroll)
         LaunchedEffect(scrollState) {
             snapshotFlow { scrollState.value }.collect { controller.saveScroll(it) }
+        }
+
+        // The final markdown blocks parse asynchronously: at creation the
+        // content is empty and the initial position clamps to 0. Wait until
+        // the laid-out height reaches the saved position, then jump to it.
+        LaunchedEffect(controller.savedScroll) {
+            if (controller.savedScroll > 0) {
+                withTimeoutOrNull(2_000) {
+                    snapshotFlow { scrollState.maxValue }
+                        .first { it >= controller.savedScroll }
+                }
+                scrollState.scrollTo(minOf(controller.savedScroll, scrollState.maxValue))
+            }
         }
 
         val defaultUriHandler = LocalUriHandler.current
