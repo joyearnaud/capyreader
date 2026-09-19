@@ -689,6 +689,12 @@ fun ArticleScreen(
                         articles = articles,
                         onBackPressed = {
                             clearArticle()
+                            // Coming back from a digest reference: reopen the
+                            // digest at the saved position.
+                            if (returnToSummary) {
+                                returnToSummary = false
+                                showListSummary = true
+                            }
                         },
                         onToggleRead = viewModel::toggleArticleRead,
                         onToggleStar = viewModel::toggleArticleStar,
