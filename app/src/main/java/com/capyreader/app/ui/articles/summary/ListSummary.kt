@@ -23,12 +23,15 @@ class ListSummaryStateHolder {
     var referenceTargets by mutableStateOf(emptyList<String>())
     var lastScrollPosition: Int = 0
     var shareSources: String = ""
+    // Frozen at reference-tap time: the sheet dismissal clamps the scroll to
+    // 0 frame by frame, and those teardown saves would erase the tap position.
+    var scrollFrozen: Boolean = false
 }
 
 class ListSummaryController(
     private val holder: ListSummaryStateHolder = ListSummaryStateHolder(),
     val isConfigured: Boolean = false,
-    val summarize: () -> Unit = {},
+    val summarize: (dayWindow: Boolean) -> Unit = {},
     val dismiss: () -> Unit = {},
 ) {
     val state: SummaryUiState get() = holder.state
@@ -36,10 +39,18 @@ class ListSummaryController(
     val savedScroll: Int get() = holder.lastScrollPosition
     val shareSources: String get() = holder.shareSources
 
+    fun freezeScroll() {
+        holder.scrollFrozen = true
+    }
+
+    fun unfreezeScroll() {
+        holder.scrollFrozen = false
+    }
+
     fun saveScroll(position: Int) {
-        // 0 is the empty-content clamp seen during sheet teardown — never a
-        // real reading position; storing it would erase the saved one.
-        if (position <= 0) return
+        // Frozen at reference-tap time (the dismissal clamps the scroll to 0
+        // frame by frame), and 0 is never a real reading position anyway.
+        if (holder.scrollFrozen || position <= 0) return
 
         Log.d("ListSummary", "saveScroll=$position")
         holder.lastScrollPosition = position
@@ -61,7 +72,7 @@ fun rememberListSummary(
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()
 
-    val run: () -> Unit = {
+    val run: (dayWindow: Boolean) -> Unit = { dayWindow ->
         activeJob?.cancel()
         activeJob = scope.launch {
             holder.state = SummaryUiState(isLoading = true)
@@ -69,7 +80,12 @@ fun rememberListSummary(
             try {
                 val listPrompt = appPreferences.aiOptions.listPrompt.get()
                 val entries = withContext(Dispatchers.IO) {
-                    account.findRecentForDigest(filter).map { buildDigestEntry(it) }
+                    val fetched = account.findRecentForDigest(filter)
+                    if (dayWindow) {
+                        selectDigestArticles(fetched)
+                    } else {
+                        fetched
+                    }.map { buildDigestEntry(it) }
                 }
 
                 if (entries.isEmpty()) {

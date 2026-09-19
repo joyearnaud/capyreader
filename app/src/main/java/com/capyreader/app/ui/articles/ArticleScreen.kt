@@ -70,6 +70,7 @@ import com.capyreader.app.ui.LocalTimeFormats
 import com.capyreader.app.ui.LocalUnreadCount
 import com.capyreader.app.ui.navigationTitle
 import com.capyreader.app.ui.articles.audio.AudioPlayerController
+import com.capyreader.app.ui.articles.summary.DigestModeDialog
 import com.capyreader.app.ui.articles.summary.ListSummarySheet
 import com.capyreader.app.ui.articles.summary.rememberListSummary
 import com.capyreader.app.ui.articles.audio.FloatingAudioPlayer
@@ -188,6 +189,7 @@ fun ArticleScreen(
     )
     var showListSummary by remember { mutableStateOf(false) }
     var returnToSummary by remember { mutableStateOf(false) }
+    var showDigestModeDialog by remember { mutableStateOf(false) }
 
     val onMarkAllRead = { range: MarkRead ->
         viewModel.markAllRead(
@@ -570,8 +572,7 @@ fun ArticleScreen(
                             ArticleListTopBar(
                                 onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0) {
                                     {
-                                        listSummary.summarize()
-                                        showListSummary = true
+                                        showDigestModeDialog = true
                                     }
                                 } else {
                                     null
@@ -726,11 +727,26 @@ fun ArticleScreen(
                     returnToSummary = false
                 },
                 onOpenArticle = {
+                    listSummary.freezeScroll()
                     showListSummary = false
                     returnToSummary = true
                     selectArticle(it)
                 },
                 onMarkAllRead = { markAllRead(MarkRead.All) },
+            )
+        }
+
+        if (showDigestModeDialog) {
+            DigestModeDialog(
+                onDayWindow = {
+                    listSummary.summarize(true)
+                    showListSummary = true
+                },
+                onAll = {
+                    listSummary.summarize(false)
+                    showListSummary = true
+                },
+                onDismiss = { showDigestModeDialog = false },
             )
         }
 
