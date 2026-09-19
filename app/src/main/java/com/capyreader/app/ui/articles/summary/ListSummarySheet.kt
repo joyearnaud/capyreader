@@ -40,10 +40,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withTimeoutOrNull
 import android.content.Intent
 import androidx.compose.ui.Alignment
@@ -81,21 +83,32 @@ fun ListSummarySheet(
         // The position survives close/reopen (link taps): saved per scroll
         // frame on the holder (plain var), applied at creation.
         val scrollState = rememberScrollState(initial = controller.savedScroll)
+        // The final markdown blocks parse asynchronously: at creation the
+        // content is empty and the initial position clamps to 0. So saving is
+        // gated on the digest being rendered (never overwrite the saved
+        // position with 0), and the restore polls until the laid-out height
+        // reaches it, then jumps.
         LaunchedEffect(scrollState) {
-            snapshotFlow { scrollState.value }.collect { controller.saveScroll(it) }
+            snapshotFlow { scrollState.value }.collect { value ->
+                if (state.text != null) {
+                    controller.saveScroll(value)
+                }
+            }
         }
 
-        // The final markdown blocks parse asynchronously: at creation the
-        // content is empty and the initial position clamps to 0. Wait until
-        // the laid-out height reaches the saved position, then jump to it.
         LaunchedEffect(controller.savedScroll) {
-            if (controller.savedScroll > 0) {
-                withTimeoutOrNull(2_000) {
-                    snapshotFlow { scrollState.maxValue }
-                        .first { it >= controller.savedScroll }
+            val target = controller.savedScroll
+            if (target <= 0) return@LaunchedEffect
+
+            val deadline = System.nanoTime() + 5_000_000_000L
+            while (coroutineContext.isActive && System.nanoTime() < deadline) {
+                if (scrollState.maxValue >= target) {
+                    scrollState.scrollTo(target)
+                    break
                 }
-                scrollState.scrollTo(minOf(controller.savedScroll, scrollState.maxValue))
+                withFrameNanos { }
             }
+            scrollState.scrollTo(minOf(target, scrollState.maxValue))
         }
 
         val defaultUriHandler = LocalUriHandler.current
