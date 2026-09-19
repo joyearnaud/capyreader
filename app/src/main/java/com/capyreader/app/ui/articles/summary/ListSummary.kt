@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import android.util.Log
 import com.capyreader.app.preferences.AppPreferences
 import com.jocmp.aiclient.SummaryClient
 import com.jocmp.capy.Account
@@ -36,6 +37,11 @@ class ListSummaryController(
     val shareSources: String get() = holder.shareSources
 
     fun saveScroll(position: Int) {
+        // 0 is the empty-content clamp seen during sheet teardown — never a
+        // real reading position; storing it would erase the saved one.
+        if (position <= 0) return
+
+        Log.d("ListSummary", "saveScroll=$position")
         holder.lastScrollPosition = position
     }
 }
@@ -63,8 +69,7 @@ fun rememberListSummary(
             try {
                 val listPrompt = appPreferences.aiOptions.listPrompt.get()
                 val entries = withContext(Dispatchers.IO) {
-                    selectDigestArticles(account.findRecentForDigest(filter))
-                        .map { buildDigestEntry(it) }
+                    account.findRecentForDigest(filter).map { buildDigestEntry(it) }
                 }
 
                 if (entries.isEmpty()) {
