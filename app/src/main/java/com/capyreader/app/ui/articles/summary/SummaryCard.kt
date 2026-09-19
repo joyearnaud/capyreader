@@ -13,8 +13,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import android.content.Intent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.capyreader.app.R
@@ -26,6 +28,7 @@ fun SummaryCard(
 ) {
     val state = summary.state
     if (!state.isVisible) return
+    val context = LocalContext.current
 
     Card(
         modifier = modifier
@@ -59,6 +62,21 @@ fun SummaryCard(
                     enabled = !state.isLoading,
                 ) {
                     Text(stringResource(R.string.summary_card_resummarize))
+                }
+                TextButton(
+                    onClick = {
+                        val text = state.text?.let { stripStreamMarkers(it) }
+                            ?: return@TextButton
+
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(Intent.createChooser(intent, null))
+                    },
+                    enabled = state.text != null,
+                ) {
+                    Text(stringResource(R.string.list_summary_share))
                 }
                 TextButton(onClick = summary.dismiss) {
                     Text(stringResource(R.string.summary_card_dismiss))
