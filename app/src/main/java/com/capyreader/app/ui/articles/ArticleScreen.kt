@@ -217,6 +217,8 @@ fun ArticleScreen(
 
     val confirmMarkAllReadEnabled by appPreferences.articleListOptions.confirmMarkAllRead.asState()
     var isMarkAllReadDialogOpen by remember { mutableStateOf(false) }
+    // The digest's mark-read button targets only the digest's articles.
+    var markDigestReadPending by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(
         LocalFullContent provides fullContent,
@@ -738,7 +740,10 @@ fun ArticleScreen(
                     returnToSummary = true
                     selectArticle(it)
                 },
-                onMarkAllRead = { markAllRead(MarkRead.All) },
+                onMarkAllRead = {
+                    markDigestReadPending = true
+                    isMarkAllReadDialogOpen = true
+                },
             )
         }
 
@@ -803,10 +808,16 @@ fun ArticleScreen(
             MarkAllReadDialog(
                 onConfirm = {
                     isMarkAllReadDialogOpen = false
-                    onMarkAllRead(MarkRead.All)
+                    if (markDigestReadPending) {
+                        markDigestReadPending = false
+                        viewModel.markDigestRead(listSummary.digestArticleIds)
+                    } else {
+                        onMarkAllRead(MarkRead.All)
+                    }
                 },
                 onDismissRequest = {
                     isMarkAllReadDialogOpen = false
+                    markDigestReadPending = false
                 },
             )
         }

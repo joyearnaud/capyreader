@@ -351,6 +351,13 @@ class ArticleScreenViewModel(
         }
     }
 
+    fun markDigestRead(articleIDs: List<String>) {
+        viewModelScope.launchIO {
+            account.markAllRead(articleIDs)
+            notificationHelper.dismissNotifications(articleIDs)
+        }
+    }
+
     fun markAllRead(
         onArticlesCleared: () -> Unit = {},
         range: MarkRead = MarkRead.All,

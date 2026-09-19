@@ -24,6 +24,9 @@ class ListSummaryStateHolder {
     var referenceTargets by mutableStateOf(emptyList<String>())
     var lastScrollPosition: Int = 0
     var shareSources: String = ""
+    // Articles included in the current digest — the mark-read button targets
+    // exactly these, not the whole scope.
+    var articleIds: List<String> = emptyList()
     // Frozen at reference-tap time: the sheet dismissal clamps the scroll to
     // 0 frame by frame, and those teardown saves would erase the tap position.
     var scrollFrozen: Boolean = false
@@ -41,6 +44,7 @@ class ListSummaryController(
     val state: SummaryUiState get() = holder.state
     val referenceTargets: List<String> get() = holder.referenceTargets
     val savedScroll: Int get() = holder.lastScrollPosition
+    val digestArticleIds: List<String> get() = holder.articleIds
     val shareSources: String get() = holder.shareSources
 
     fun freezeScroll() {
@@ -101,6 +105,7 @@ fun rememberListSummary(
                     holder.state = SummaryUiState(error = "No articles to summarize")
                     return@launch
                 }
+                holder.articleIds = entries.map { it.id }
 
                 val targets = entries.map { it.id }
                 holder.referenceTargets = targets
