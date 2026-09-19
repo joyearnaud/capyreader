@@ -102,10 +102,12 @@ fun ListSummarySheet(
                 Modifier
                     .fillMaxWidth()
                     // Fixed from the first frame: a growing heightIn made the
-                    // sheet itself resize on every typewriter tick — the top
-                    // edge crept upward all along the stream. The sheet opens
-                    // at full height and growth happens inside the scroll.
-                    .heightIn(min = 560.dp)
+                    // sheet itself resize on every typewriter tick. A min-only
+                    // heightIn also let the sheet measure the scroll column
+                    // with infinite max height — a hard crash. Fixed size is
+                    // clamped to the screen in landscape by the incoming
+                    // constraints.
+                    .height(560.dp)
                     .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp)
             ) {
