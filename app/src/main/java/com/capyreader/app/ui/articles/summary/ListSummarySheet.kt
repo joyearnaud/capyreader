@@ -116,10 +116,12 @@ fun ListSummarySheet(
                         text = stringResource(R.string.list_summary_title),
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    AnimatedVisibility(
-                        visible = state.isLoading,
-                        modifier = Modifier.weight(1f),
-                    ) {
+                }
+
+                AnimatedVisibility(
+                    visible = state.isLoading,
+                    modifier = Modifier.weight(1f),
+                ) {
                         val pulse by rememberInfiniteTransition(label = "skeleton").animateFloat(
                             initialValue = 0.4f,
                             targetValue = 1f,
@@ -161,7 +163,6 @@ fun ListSummarySheet(
                             }
                         }
                     }
-                }
 
                 AnimatedVisibility(
                     visible = state.text != null || state.streamText != null || state.error != null,
