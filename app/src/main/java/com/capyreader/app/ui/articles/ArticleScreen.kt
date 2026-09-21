@@ -131,6 +131,8 @@ fun ArticleScreen(
     onPendingArticleSelected: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
     onNavigateToSummaries: () -> Unit = {},
+    summariesReturnPending: Boolean = false,
+    onSummariesReturnConsumed: () -> Unit = {},
 ) {
     val currentFeed by viewModel.currentFeed.collectAsStateWithLifecycle(initialValue = null)
     val feeds by viewModel.topLevelFeeds.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -704,6 +706,11 @@ fun ArticleScreen(
                             if (returnToSummary) {
                                 returnToSummary = false
                                 showListSummary = true
+                            } else if (summariesReturnPending) {
+                                // Article opened from the Summaries history:
+                                // closing it jumps straight back to the digest.
+                                onSummariesReturnConsumed()
+                                onNavigateToSummaries()
                             }
                         },
                         onToggleRead = viewModel::toggleArticleRead,

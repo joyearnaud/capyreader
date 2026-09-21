@@ -18,8 +18,10 @@ import com.jocmp.capy.Account
 import com.jocmp.capy.Article
 import java.security.MessageDigest
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 val LocalSummary = compositionLocalOf { SummaryController() }
@@ -87,11 +89,13 @@ fun rememberSummary(
                 holder.state = SummaryUiState(isLoading = true)
 
                 if (appPreferences.aiOptions.articleSummaryCacheEnabled.get() && !forceRefresh) {
-                    val cached = account.findSummary(
-                        articleID = target.id,
-                        providerKey = providerKey,
-                        promptHash = hash,
-                    )
+                    val cached = withContext(Dispatchers.IO) {
+                        account.findSummary(
+                            articleID = target.id,
+                            providerKey = providerKey,
+                            promptHash = hash,
+                        )
+                    }
 
                     if (cached != null && cached.createdAt >= ZonedDateTime.now().minusDays(3)) {
                         holder.state = SummaryUiState(text = cached.content, isTruncated = truncated)

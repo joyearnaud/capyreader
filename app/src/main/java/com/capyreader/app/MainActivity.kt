@@ -18,6 +18,8 @@ class MainActivity : BaseActivity() {
 
     private var pendingArticleID by mutableStateOf<String?>(null)
 
+    private var pendingSummariesReturn by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         pendingArticleID = NotificationHelper.openFromIntent(intent, appPreferences = appPreferences)
@@ -29,6 +31,12 @@ class MainActivity : BaseActivity() {
                 pendingArticleID = pendingArticleID,
                 onPendingArticleSelected = { pendingArticleID = null },
                 onOpenArticle = { pendingArticleID = it },
+                summariesReturnPending = pendingSummariesReturn,
+                onOpenArticleFromSummaries = {
+                    pendingArticleID = it
+                    pendingSummariesReturn = true
+                },
+                onSummariesReturnConsumed = { pendingSummariesReturn = false },
             )
         }
     }

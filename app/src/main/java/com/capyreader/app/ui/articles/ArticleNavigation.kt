@@ -12,6 +12,9 @@ fun NavGraphBuilder.articleGraph(
     onPendingArticleSelected: () -> Unit = {},
     onNavigateToSummaries: () -> Unit = {},
     onOpenArticle: (String) -> Unit = {},
+    summariesReturnPending: Boolean = false,
+    onOpenArticleFromSummaries: (String) -> Unit = {},
+    onSummariesReturnConsumed: () -> Unit = {},
 ) {
     composable<Route.Articles> {
         ArticleScreen(
@@ -23,6 +26,8 @@ fun NavGraphBuilder.articleGraph(
                 }
             },
             onNavigateToSummaries = onNavigateToSummaries,
+            summariesReturnPending = summariesReturnPending,
+            onSummariesReturnConsumed = onSummariesReturnConsumed,
         )
     }
     composable<Route.Summaries> {
@@ -32,7 +37,7 @@ fun NavGraphBuilder.articleGraph(
             },
             onOpenArticle = { articleID ->
                 navController.popBackStack(Route.Articles, inclusive = false)
-                onOpenArticle(articleID)
+                onOpenArticleFromSummaries(articleID)
             },
         )
     }

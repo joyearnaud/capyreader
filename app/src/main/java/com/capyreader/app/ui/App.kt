@@ -20,6 +20,9 @@ fun App(
     pendingArticleID: String? = null,
     onPendingArticleSelected: () -> Unit = {},
     onOpenArticle: (String) -> Unit = {},
+    summariesReturnPending: Boolean = false,
+    onOpenArticleFromSummaries: (String) -> Unit = {},
+    onSummariesReturnConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
 
@@ -67,6 +70,9 @@ fun App(
                         }
                     },
                     onOpenArticle = onOpenArticle,
+                    summariesReturnPending = summariesReturnPending,
+                    onOpenArticleFromSummaries = onOpenArticleFromSummaries,
+                    onSummariesReturnConsumed = onSummariesReturnConsumed,
                 )
             }
         }

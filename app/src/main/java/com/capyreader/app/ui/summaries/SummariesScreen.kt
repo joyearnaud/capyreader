@@ -55,7 +55,6 @@ import java.time.format.FormatStyle
 sealed class SummaryHistoryItem {
     abstract val id: String
     abstract val title: String
-    abstract val subtitle: String
     abstract val createdAt: ZonedDateTime
     abstract val content: String
     abstract val referenceTargets: List<String>
@@ -67,10 +66,7 @@ sealed class SummaryHistoryItem {
         override val createdAt: ZonedDateTime,
         override val content: String,
         override val referenceTargets: List<String>,
-    ) : SummaryHistoryItem() {
-        override val subtitle: String =
-            "$articleCount"
-    }
+    ) : SummaryHistoryItem()
 
     data class Article(
         val articleID: String,
@@ -79,10 +75,15 @@ sealed class SummaryHistoryItem {
         override val content: String,
     ) : SummaryHistoryItem() {
         override val id: String = articleID
-        override val subtitle: String = ""
         override val referenceTargets: List<String> = emptyList()
     }
 }
+
+/**
+ * Digest the user was last reading in the Summaries screen. Process-wide so
+ * the detail reopens directly when an article opened from it is closed.
+ */
+private var lastSelectedSummaryId: String? = null
 
 private val DIGEST_LIST_TTL: java.time.Duration = java.time.Duration.ofDays(3)
 
@@ -123,10 +124,15 @@ fun SummariesScreen(
                 }
             (digests + summaries).sortedByDescending { it.createdAt }
         }
+        // Returning from an article opened out of a digest: reopen it.
+        if (selected == null && lastSelectedSummaryId != null) {
+            selected = items.find { it.id == lastSelectedSummaryId }
+        }
     }
 
     BackHandler(enabled = selected != null) {
         selected = null
+        lastSelectedSummaryId = null
     }
 
     val title = stringResource(R.string.summaries_nav_title)
@@ -137,7 +143,10 @@ fun SummariesScreen(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (selected != null) selected = null else onNavigateBack()
+                        if (selected != null) {
+                            selected = null
+                            lastSelectedSummaryId = null
+                        } else onNavigateBack()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
@@ -202,7 +211,10 @@ fun SummariesScreen(
                                 contentDescription = null,
                             )
                         },
-                        modifier = Modifier.clickable { selected = item },
+                        modifier = Modifier.clickable {
+                            lastSelectedSummaryId = item.id
+                            selected = item
+                        },
                     )
                 }
             }
