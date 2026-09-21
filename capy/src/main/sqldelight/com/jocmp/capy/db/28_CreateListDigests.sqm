@@ -1,0 +1,8 @@
+CREATE TABLE list_digests (
+  id TEXT NOT NULL PRIMARY KEY,
+  scope_label TEXT NOT NULL,
+  article_count INTEGER NOT NULL,
+  article_ids TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);

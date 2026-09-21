@@ -14,6 +14,11 @@
     <string name="filter_unread">Unread</string>
     <string name="filter_all">All</string>
     <string name="filter_today">Today</string>
+    <string name="summaries_nav_title">Summaries</string>
+    <string name="summaries_empty">No summaries in the last 3 days</string>
+    <string name="summaries_digest_row">List digest — %1$s</string>
+    <string name="summaries_digest_subtitle">%1$d articles</string>
+    <string name="summaries_article_subtitle">Article summary</string>
     <string name="feed_action_unsubscribe">Unsubscribe</string>
     <string name="filter_action_menu_description">Edit</string>
     <string name="feed_action_edit">Edit Feed</string>

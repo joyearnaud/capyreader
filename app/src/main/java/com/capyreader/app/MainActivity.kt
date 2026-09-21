@@ -28,6 +28,7 @@ class MainActivity : BaseActivity() {
                 appPreferences = appPreferences,
                 pendingArticleID = pendingArticleID,
                 onPendingArticleSelected = { pendingArticleID = null },
+                onOpenArticle = { pendingArticleID = it },
             )
         }
     }

@@ -130,6 +130,7 @@ fun ArticleScreen(
     pendingArticleID: String? = null,
     onPendingArticleSelected: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
+    onNavigateToSummaries: () -> Unit = {},
 ) {
     val currentFeed by viewModel.currentFeed.collectAsStateWithLifecycle(initialValue = null)
     val feeds by viewModel.topLevelFeeds.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -530,6 +531,13 @@ fun ArticleScreen(
                     onSelectSavedSearch = selectSavedSearch,
                     onNavigateToSettings = {
                         onNavigateToSettings()
+                        coroutineScope.launchUI {
+                            delay(100)
+                            drawerState.close()
+                        }
+                    },
+                    onOpenSummaries = {
+                        onNavigateToSummaries()
                         coroutineScope.launchUI {
                             delay(100)
                             drawerState.close()

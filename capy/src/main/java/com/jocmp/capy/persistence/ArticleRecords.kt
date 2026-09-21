@@ -10,6 +10,7 @@ import com.jocmp.capy.ArticleStatus
 import com.jocmp.capy.ArticleSummaryRecord
 import com.jocmp.capy.FeedPriority
 import com.jocmp.capy.MarkRead
+import com.jocmp.capy.RecentArticleSummary
 import com.jocmp.capy.articles.SortOrder
 import com.jocmp.capy.common.TimeHelpers.nowUTC
 import com.jocmp.capy.common.toDateTimeFromSeconds
@@ -198,6 +199,18 @@ class ArticleRecords(
             database.article_summariesQueries.deleteOrphaned()
         }
     }
+
+    fun recentSummaries(cutoff: ZonedDateTime): List<RecentArticleSummary> =
+        database.article_summariesQueries.recentWithArticle(
+            cutoff = cutoff.toEpochSecond(),
+        ).executeAsList().map { row ->
+            RecentArticleSummary(
+                articleID = row.article_id,
+                articleTitle = row.article_title ?: "",
+                content = row.content,
+                createdAt = row.created_at.toDateTimeFromSeconds,
+            )
+        }
 
     /** Most recent articles for a list digest, both read statuses included.
      *  Saved searches are excluded (v1) and return an empty list. */

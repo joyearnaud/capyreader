@@ -30,6 +30,7 @@ import com.jocmp.capy.opml.OPMLImporter
 import com.jocmp.capy.persistence.ArticleRecords
 import com.jocmp.capy.persistence.EnclosureRecords
 import com.jocmp.capy.persistence.FeedRecords
+import com.jocmp.capy.persistence.ListDigestRecords
 import com.jocmp.capy.persistence.FolderRecords
 import com.jocmp.capy.persistence.SavedSearchRecords
 import com.jocmp.capy.persistence.SyncStatusRecords
@@ -103,6 +104,7 @@ data class Account(
     }
 ) {
     internal val articleRecords = ArticleRecords(database)
+    internal val listDigestRecords = ListDigestRecords(database)
     private val enclosureRecords = EnclosureRecords(database)
     private val feedRecords = FeedRecords(database)
     private val folderRecords = FolderRecords(database)
@@ -317,6 +319,32 @@ data class Account(
             providerKey = providerKey,
             promptHash = promptHash,
         )
+
+    fun findDigest(id: String, cutoff: ZonedDateTime): ListDigestRecord? =
+        listDigestRecords.findByKey(id, cutoff)
+
+    fun recentDigests(cutoff: ZonedDateTime): List<ListDigestRecord> =
+        listDigestRecords.recent(cutoff)
+
+    fun recentSummaries(cutoff: ZonedDateTime): List<RecentArticleSummary> =
+        articleRecords.recentSummaries(cutoff)
+
+    suspend fun upsertDigest(
+        id: String,
+        scopeLabel: String,
+        articleCount: Int,
+        articleIds: List<String>,
+        content: String,
+    ) = withIOContext {
+        listDigestRecords.upsert(
+            id = id,
+            scopeLabel = scopeLabel,
+            articleCount = articleCount,
+            articleIds = articleIds,
+            content = content,
+        )
+        listDigestRecords.deleteOlderThan(cutoff = nowUTC().minusDays(3))
+    }
 
     fun findRecentForDigest(filter: ArticleFilter, limit: Long = 200): List<Article> =
         articleRecords.findRecentForDigest(filter, limit)

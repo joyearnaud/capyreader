@@ -286,6 +286,11 @@
     <string name="selected">Sélectionné</string>
     <string name="theme_sunset">Crépuscule</string>
     <string name="filter_today">Aujourd\'hui</string>
+    <string name="summaries_nav_title">Résumés</string>
+    <string name="summaries_empty">Aucun résumé sur les 3 derniers jours</string>
+    <string name="summaries_digest_row">Résumé de liste — %1$s</string>
+    <string name="summaries_digest_subtitle">%1$d articles</string>
+    <string name="summaries_article_subtitle">Résumé d\'article</string>
     <string name="settings_option_show_today_filter">Aujourd\'hui</string>
     <string name="auth_fields_freshrss_api_password">Mot de passe API</string>
     <string name="freshrss_visibility_option_important">Important</string>

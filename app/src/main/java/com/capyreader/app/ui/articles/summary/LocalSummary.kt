@@ -1,5 +1,7 @@
 package com.capyreader.app.ui.articles.summary
 
+import java.time.ZonedDateTime
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -91,7 +93,7 @@ fun rememberSummary(
                         promptHash = hash,
                     )
 
-                    if (cached != null) {
+                    if (cached != null && cached.createdAt >= ZonedDateTime.now().minusDays(3)) {
                         holder.state = SummaryUiState(text = cached.content, isTruncated = truncated)
                         return@launch
                     }

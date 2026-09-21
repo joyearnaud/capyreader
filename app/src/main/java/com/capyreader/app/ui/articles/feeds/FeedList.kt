@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
@@ -70,6 +71,7 @@ fun FeedList(
     onFeedAdded: (feedID: String) -> Unit,
     onBeforeFeedAdd: () -> Unit = {},
     onNavigateToSettings: () -> Unit,
+    onOpenSummaries: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val buttonState = rememberRefreshButtonState(refreshState)
@@ -172,6 +174,20 @@ fun FeedList(
                     },
                 )
             }
+
+            DrawerItem(
+                icon = {
+                    Icon(
+                        Icons.AutoMirrored.Rounded.Notes,
+                        contentDescription = null
+                    )
+                },
+                label = {
+                    ListTitle(stringResource(R.string.summaries_nav_title))
+                },
+                selected = false,
+                onClick = { onOpenSummaries() },
+            )
 
             if (readLaterFeed != null) {
                 Box {

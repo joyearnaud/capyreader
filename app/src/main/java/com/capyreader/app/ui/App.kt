@@ -19,6 +19,7 @@ fun App(
     appPreferences: AppPreferences,
     pendingArticleID: String? = null,
     onPendingArticleSelected: () -> Unit = {},
+    onOpenArticle: (String) -> Unit = {},
 ) {
     val navController = rememberNavController()
 
@@ -60,6 +61,12 @@ fun App(
                     navController = navController,
                     pendingArticleID = pendingArticleID,
                     onPendingArticleSelected = onPendingArticleSelected,
+                    onNavigateToSummaries = {
+                        navController.navigate(Route.Summaries) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenArticle = onOpenArticle,
                 )
             }
         }

@@ -12,6 +12,7 @@ import com.jocmp.capy.Account
 import com.jocmp.capy.ArticleFilter
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -119,6 +120,26 @@ fun rememberListSummary(
                         holder.state = SummaryUiState(text = entry.text)
                         return@launch
                     }
+
+                    // Persisted layer: survives process death, valid 3 days.
+                    val persisted = withContext(Dispatchers.IO) {
+                        account.findDigest(
+                            id = digestCacheKey(filter, targets, listPrompt),
+                            cutoff = ZonedDateTime.now().minusDays(3),
+                        )
+                    }
+                    if (persisted != null) {
+                        holder.articleIds = persisted.articleIds
+                        holder.referenceTargets = persisted.articleIds
+                        cache.put(
+                            filter,
+                            targets,
+                            listPrompt,
+                            ListSummaryCache.Entry(text = persisted.content, articleIds = persisted.articleIds),
+                        )
+                        holder.state = SummaryUiState(text = persisted.content)
+                        return@launch
+                    }
                 }
 
                 val request = buildListSummaryRequest(scopeLabel, entries, listPrompt)
@@ -154,6 +175,18 @@ fun rememberListSummary(
                                 listPrompt,
                                 ListSummaryCache.Entry(text = completed, articleIds = targets),
                             )
+                            // created_at is set here, at completion: the 3-day
+                            // window measures availability from when the digest
+                            // finished. Purge of >3d rows happens inside.
+                            runCatching {
+                                account.upsertDigest(
+                                    id = digestCacheKey(filter, targets, listPrompt),
+                                    scopeLabel = scopeLabel,
+                                    articleCount = targets.size,
+                                    articleIds = targets,
+                                    content = completed,
+                                )
+                            }
                         }
                         holder.state = SummaryUiState(text = completed)
                     }

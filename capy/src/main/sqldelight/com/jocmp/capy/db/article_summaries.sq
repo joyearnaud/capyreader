@@ -12,3 +12,10 @@ WHERE article_id = :articleID
 deleteOrphaned:
 DELETE FROM article_summaries
 WHERE NOT EXISTS (SELECT 1 FROM articles WHERE articles.id = article_summaries.article_id);
+
+recentWithArticle:
+SELECT s.article_id, a.title AS article_title, s.content, s.created_at
+FROM article_summaries s
+JOIN articles a ON a.id = s.article_id
+WHERE s.created_at >= :cutoff
+ORDER BY s.created_at DESC;

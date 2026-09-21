@@ -1,0 +1,16 @@
+upsert:
+INSERT OR REPLACE INTO list_digests (id, scope_label, article_count, article_ids, content, created_at)
+VALUES (:id, :scopeLabel, :articleCount, :articleIds, :content, :createdAt);
+
+findByKey:
+SELECT * FROM list_digests
+WHERE id = :id AND created_at >= :cutoff;
+
+recent:
+SELECT * FROM list_digests
+WHERE created_at >= :cutoff
+ORDER BY created_at DESC;
+
+deleteOlderThan:
+DELETE FROM list_digests
+WHERE created_at < :cutoff;
