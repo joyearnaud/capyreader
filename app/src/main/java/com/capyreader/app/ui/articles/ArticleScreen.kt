@@ -3,31 +3,24 @@ package com.capyreader.app.ui.articles
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Notes
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
-import androidx.compose.material3.adaptive.layout.ListDetailPaneScaffoldRole
-import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,8 +38,6 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -68,14 +59,13 @@ import com.capyreader.app.ui.LocalLinkOpener
 import com.capyreader.app.ui.LocalMarkAllReadButtonPosition
 import com.capyreader.app.ui.LocalTimeFormats
 import com.capyreader.app.ui.LocalUnreadCount
-import com.capyreader.app.ui.navigationTitle
-import com.capyreader.app.ui.articles.audio.AudioPlayerController
 import com.capyreader.app.ui.articles.summary.DigestModeDialog
 import com.capyreader.app.ui.articles.summary.ListSummarySheet
+import com.capyreader.app.ui.articles.summary.digestSheetReopenPending
 import com.capyreader.app.ui.articles.summary.rememberListSummary
+import com.capyreader.app.ui.navigationTitle
+import com.capyreader.app.ui.articles.audio.AudioPlayerController
 import com.capyreader.app.ui.articles.audio.FloatingAudioPlayer
-import com.capyreader.app.ui.articles.detail.ArticleView
-import com.capyreader.app.ui.articles.detail.CapyPlaceholder
 import com.capyreader.app.ui.articles.feeds.AngleRefreshState
 import com.capyreader.app.ui.articles.feeds.FeedActions
 import com.capyreader.app.ui.articles.feeds.FeedList
@@ -93,10 +83,10 @@ import com.capyreader.app.ui.articles.list.MarkAllReadDialog
 import com.capyreader.app.ui.articles.list.SwipeUpActionBox
 import com.capyreader.app.ui.articles.list.resetScrollBehaviorListener
 import com.capyreader.app.ui.articles.media.ArticleMediaView
-import com.capyreader.app.ui.articles.summary.LocalSummary
-import com.capyreader.app.ui.articles.summary.rememberSummary
 import com.capyreader.app.ui.collectChangesWithCurrent
 import com.capyreader.app.ui.collectChangesWithDefault
+import com.capyreader.app.ui.LocalAppDrawer
+import com.capyreader.app.ui.articles.list.SearchView
 import com.capyreader.app.ui.components.ArticleSearch
 import com.capyreader.app.ui.components.LocalSnackbarHost
 import com.capyreader.app.ui.components.SearchState
@@ -125,14 +115,12 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun ArticleScreen(
-    viewModel: ArticleScreenViewModel = koinViewModel(),
-    appPreferences: AppPreferences = koinInject(),
-    pendingArticleID: String? = null,
-    onPendingArticleSelected: () -> Unit = {},
+    onSelectArticle: (articleID: String, searchQuery: String?) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSummaries: () -> Unit = {},
-    summariesReturnPending: Boolean = false,
-    onSummariesReturnConsumed: () -> Unit = {},
+    viewModel: ArticleScreenViewModel = koinViewModel(),
+    appPreferences: AppPreferences = koinInject(),
+    selectedArticleID: String? = null,
 ) {
     val currentFeed by viewModel.currentFeed.collectAsStateWithLifecycle(initialValue = null)
     val feeds by viewModel.topLevelFeeds.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -153,32 +141,7 @@ fun ArticleScreen(
     val afterReadAll by viewModel.afterReadAll.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    val canSwipeBottom = when (swipeBottom) {
-        ArticleListVerticalSwipe.DISABLED -> false
-        ArticleListVerticalSwipe.NEXT_FEED -> nextFilter != null
-        ArticleListVerticalSwipe.MARK_ALL_READ -> true
-    }
-    val context = LocalContext.current
-
-    val canSaveExternally by viewModel.canSaveArticleExternally.collectAsStateWithLifecycle()
-
-    val fullContent = rememberFullContent(viewModel)
-    val articleActions = rememberArticleActions(viewModel)
-    val folderActions = rememberFolderActions(viewModel)
-    val feedActions = rememberFeedActions(viewModel)
-    val savedSearchActions = rememberSavedSearchActions(viewModel)
-    val labelsActions = rememberLabelsActions(viewModel, allSavedSearches)
-    val connectivity = rememberLocalConnectivity()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val showOnboarding by viewModel.showOnboarding.collectAsState(false)
-    val markAllReadButtonPosition by appPreferences
-        .articleListOptions
-        .markReadButtonPosition
-        .collectChangesWithCurrent()
-    val badgeStyle by appPreferences.badgeStyle.collectChangesWithDefault()
-
-    val articles = viewModel.articles.collectAsLazyPagingItems()
-
+    // Digest (list summary) wiring — restored across navigation via digestSession.
     val listSummaryScopeLabel = when (val f = filter) {
         is ArticleFilter.Articles -> stringResource(f.articleStatus.navigationTitle)
         is ArticleFilter.Feeds -> allFeeds.find { it.id == f.feedID }?.displayTitle() ?: f.feedID
@@ -191,8 +154,44 @@ fun ArticleScreen(
         scopeLabel = listSummaryScopeLabel.orEmpty(),
     )
     var showListSummary by remember { mutableStateOf(false) }
-    var returnToSummary by remember { mutableStateOf(false) }
     var showDigestModeDialog by remember { mutableStateOf(false) }
+    // The digest's mark-read button targets only the digest's articles.
+    var markDigestReadPending by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (digestSheetReopenPending) {
+            digestSheetReopenPending = false
+            showListSummary = true
+        }
+    }
+
+    val canSwipeBottom = when (swipeBottom) {
+        ArticleListVerticalSwipe.DISABLED -> false
+        ArticleListVerticalSwipe.NEXT_FEED -> nextFilter != null
+        ArticleListVerticalSwipe.MARK_ALL_READ -> true
+    }
+    val context = LocalContext.current
+
+    val articleActions = rememberArticleActions(viewModel)
+    val folderActions = rememberFolderActions(viewModel)
+    val feedActions = rememberFeedActions(viewModel)
+    val savedSearchActions = rememberSavedSearchActions(viewModel)
+    val labelsActions = rememberLabelsActions(viewModel, allSavedSearches)
+    val connectivity = rememberLocalConnectivity()
+    // The drawer is hosted at the window level (see App / LocalAppDrawer) so its scrim covers both
+    // panes; this entry only publishes its content and drives open/close. Fall back to a local
+    // state when there's no host (previews).
+    val appDrawer = LocalAppDrawer.current
+    val drawerState = appDrawer?.state ?: rememberDrawerState(DrawerValue.Closed)
+    val showOnboarding by viewModel.showOnboarding.collectAsState(false)
+    val markAllReadButtonPosition by appPreferences
+        .articleListOptions
+        .markReadButtonPosition
+        .collectChangesWithCurrent()
+    val badgeStyle by appPreferences.badgeStyle.collectChangesWithDefault()
+
+    val articles = viewModel.articles.collectAsLazyPagingItems()
+    val searchResults = viewModel.searchResults.collectAsLazyPagingItems()
 
     val onMarkAllRead = { range: MarkRead ->
         viewModel.markAllRead(
@@ -204,9 +203,6 @@ fun ArticleScreen(
             range = range,
         )
     }
-
-    val article = viewModel.article
-    val summary = rememberSummary(article)
 
     val search = ArticleSearch(
         query = searchQuery,
@@ -220,12 +216,8 @@ fun ArticleScreen(
 
     val confirmMarkAllReadEnabled by appPreferences.articleListOptions.confirmMarkAllRead.asState()
     var isMarkAllReadDialogOpen by remember { mutableStateOf(false) }
-    // The digest's mark-read button targets only the digest's articles.
-    var markDigestReadPending by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(
-        LocalFullContent provides fullContent,
-        LocalSummary provides summary,
         LocalArticleActions provides articleActions,
         LocalFolderActions provides folderActions,
         LocalFeedActions provides feedActions,
@@ -250,13 +242,9 @@ fun ArticleScreen(
             mutableStateOf(false)
         }
         val coroutineScope = rememberCoroutineScope()
-        val scaffoldNavigator = rememberListDetailPaneScaffoldNavigator()
-        val showMultipleColumns = scaffoldNavigator.scaffoldDirective.maxHorizontalPartitions > 1
-        val paneExpansion = rememberArticlePaneExpansion()
         val isPullToRefreshing = viewModel.isPullToRefreshing
         val addFeedSuccessMessage = stringResource(R.string.add_feed_success)
         val scrollBehavior = pinnedScrollBehavior()
-        var media by rememberSaveable(saver = Media.Saver) { mutableStateOf(null) }
         val audioController: AudioPlayerController = koinInject()
         val audioEnclosure by audioController.currentAudio.collectAsState()
         val focusManager = LocalFocusManager.current
@@ -264,27 +252,7 @@ fun ArticleScreen(
             viewModel.dismissUnauthorizedMessage()
             setUpdatePasswordDialogOpen(true)
         }
-        suspend fun navigateToDetail() {
-            scaffoldNavigator.navigateTo(ListDetailPaneScaffoldRole.Detail)
-            if (showMultipleColumns) {
-                paneExpansion.restore()
-            }
-        }
-
         val listState = articles.rememberLazyListState()
-
-        fun scrollToArticle(index: Int) {
-            coroutineScope.launch {
-                if (index > -1) {
-                    val visibleItemsInfo = listState.layoutInfo.visibleItemsInfo
-                    val isItemVisible = visibleItemsInfo.any { it.index == index }
-
-                    if (!isItemVisible) {
-                        listState.animateScrollToItem(index)
-                    }
-                }
-            }
-        }
 
         val resetScrollBehaviorOffset = resetScrollBehaviorListener(
             listState = listState,
@@ -297,6 +265,12 @@ fun ArticleScreen(
                 resetScrollBehaviorOffset()
             }
         }
+
+        ScrollToSelectedArticleEffect(
+            selectedArticleKey = selectedArticleID,
+            articles = articles,
+            listState = listState,
+        )
 
         val (scrolledFilter, setScrolledFilter) = rememberSaveable(
             saver = ArticleFilter.Saver
@@ -329,14 +303,12 @@ fun ArticleScreen(
             articles = articles,
             scrollHighWaterMark = viewModel.scrollHighWaterMark,
             updateScrollHighWaterMark = viewModel::updateScrollHighWaterMark,
-            clampScrollHighWaterMark = viewModel::clampScrollHighWaterMark,
             markReadOnScroll = viewModel::markReadOnScroll,
             resetScrollBehaviorOffset = resetScrollBehaviorOffset,
         )
 
         suspend fun openNextStatus(action: suspend () -> Unit) {
             scope.launchIO { action() }
-            scaffoldNavigator.navigateTo(ListDetailPaneScaffoldRole.List)
         }
 
         fun markAllRead(range: MarkRead) {
@@ -394,30 +366,6 @@ fun ArticleScreen(
             }
         }
 
-        fun clearArticle() {
-            coroutineScope.launchUI {
-                scaffoldNavigator.navigateTo(ListDetailPaneScaffoldRole.List)
-            }
-            viewModel.clearArticle()
-        }
-
-        // The single user-facing close path (X button and system back/swipe):
-        // both must honor the digest reopen behavior.
-        fun closeArticle() {
-            clearArticle()
-            // Coming back from a digest reference: reopen the digest at the
-            // saved position.
-            if (returnToSummary) {
-                returnToSummary = false
-                showListSummary = true
-            } else if (summariesReturnPending) {
-                // Article opened from the Summaries history: closing it jumps
-                // straight back to the digest.
-                onSummariesReturnConsumed()
-                onNavigateToSummaries()
-            }
-        }
-
         val toggleDrawer = {
             coroutineScope.launch {
                 if (drawerState.isOpen) {
@@ -458,27 +406,20 @@ fun ArticleScreen(
             }
         }
 
-        fun setArticle(articleID: String, onComplete: (article: Article) -> Unit = {}) {
-            viewModel.selectArticle(articleID, onComplete)
-        }
-
         val linkOpener = LocalLinkOpener.current
 
-        fun selectArticle(articleID: String) {
-            setArticle(articleID) { nextArticle ->
-                if (search.isActive) {
-                    focusManager.clearFocus()
-                }
+        fun selectArticle(article: Article) {
+            if (search.isActive) {
+                focusManager.clearFocus()
+            }
 
-                val url = nextArticle.url
-                if (nextArticle.openInBrowser && url != null) {
-                    clearArticle()
-                    linkOpener.open(url.toString().toUri())
-                } else {
-                    coroutineScope.launch {
-                        navigateToDetail()
-                    }
-                }
+            // Feeds flagged "open in browser" skip the in-app reader, matching the widget behavior.
+            val url = article.url
+            if (article.openInBrowser && url != null) {
+                linkOpener.open(url.toString().toUri())
+            } else {
+                val searchQuery = search.query.takeIf { search.isActive && !it.isNullOrBlank() }
+                onSelectArticle(article.id, searchQuery)
             }
         }
 
@@ -526,17 +467,14 @@ fun ArticleScreen(
             }
         }
 
-        LaunchedEffect(pendingArticleID) {
-            val id = pendingArticleID ?: return@LaunchedEffect
-            onPendingArticleSelected()
-            selectArticle(id)
-        }
-
-        ArticleScaffold(
-            drawerState = drawerState,
-            scaffoldNavigator = scaffoldNavigator,
-            paneExpansion = paneExpansion,
-            drawerPane = {
+        // Publish the drawer pane up to the window-level host. Keyed on the data so the lambda is
+        // recreated (and the drawer recomposes) only when its contents change; the callbacks it
+        // captures are behaviorally stable.
+        val drawerContent: @Composable () -> Unit = remember(
+            folders, feeds, readLaterFeed, savedSearches, filter,
+            statusCount, todayCount, refreshAllState,
+        ) {
+            {
                 FeedList(
                     source = viewModel.source,
                     folders = folders,
@@ -573,8 +511,17 @@ fun ArticleScreen(
                     statusCount = statusCount,
                     todayCount = todayCount,
                 )
-            },
-            listPane = {
+            }
+        }
+
+        LaunchedEffect(appDrawer, drawerContent) {
+            appDrawer?.setContent(drawerContent)
+        }
+        DisposableEffect(appDrawer) {
+            onDispose { appDrawer?.setContent(null) }
+        }
+
+        Box(modifier = Modifier.fillMaxSize()) {
                 val keyboardManager = LocalSoftwareKeyboardController.current
                 val markReadPosition = LocalMarkAllReadButtonPosition.current
 
@@ -599,13 +546,6 @@ fun ArticleScreen(
                             }),
                         topBar = {
                             ArticleListTopBar(
-                                onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0) {
-                                    {
-                                        showDigestModeDialog = true
-                                    }
-                                } else {
-                                    null
-                                },
                                 onRequestJumpToTop = { scrollToTop() },
                                 onNavigateToDrawer = { openDrawer() },
                                 onRemoveFolder = { folderTitle, completion ->
@@ -613,6 +553,13 @@ fun ArticleScreen(
                                         folderTitle,
                                         completion
                                     )
+                                },
+                                onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0) {
+                                    {
+                                        showDigestModeDialog = true
+                                    }
+                                } else {
+                                    null
                                 },
                                 scrollBehavior = scrollBehavior,
                                 search = search,
@@ -676,12 +623,14 @@ fun ArticleScreen(
                                         onSwipeUp()
                                     },
                                 ) {
-                                    if (isRefreshInitialized && articles.itemCount == 0) {
+                                    val listLoaded = articles.loadState.refresh is LoadState.NotLoading
+
+                                    if (isRefreshInitialized && listLoaded && articles.itemCount == 0) {
                                         ArticleListEmptyView()
                                     } else {
                                         ArticleList(
                                             articles = articles,
-                                            selectedArticleKey = article?.id,
+                                            selectedArticleKey = selectedArticleID,
                                             listState = listState,
                                             enableMarkReadOnScroll = viewModel.markReadOnScrollEnabled,
                                             dimReadArticles = filter.status != ArticleStatus.STARRED,
@@ -689,8 +638,8 @@ fun ArticleScreen(
                                             onMarkAllRead = { range ->
                                                 onMarkAllRead(range)
                                             },
-                                            onSelect = { articleID ->
-                                                selectArticle(articleID)
+                                            onSelect = { article ->
+                                                selectArticle(article)
                                             },
                                         )
                                     }
@@ -699,65 +648,51 @@ fun ArticleScreen(
                         }
                     }
                 }
-            },
-            detailPane = {
-                if (article == null && showMultipleColumns) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        CapyPlaceholder()
-                    }
-                } else if (article != null) {
-                    val isAudioPlaying by audioController.isPlaying.collectAsState()
-                    val currentAudio by audioController.currentAudio.collectAsState()
 
-                    ArticleView(
-                        article = article,
-                        articles = articles,
-                        onBackPressed = { closeArticle() },
-                        onToggleRead = viewModel::toggleArticleRead,
-                        onToggleStar = viewModel::toggleArticleStar,
-                        canSaveExternally = canSaveExternally,
-                        onDeletePage = {
-                            clearArticle()
-                            viewModel.deletePage(article.id)
-                        },
-                        onSelectMedia = { media = it },
-                        onSelectAudio = { audio ->
-                            audioController.play(audio)
-                        },
-                        onPauseAudio = {
-                            audioController.pause()
-                        },
-                        onSelectArticle = { articleID ->
-                            setArticle(articleID)
-                        },
-                        onScrollToArticle = { index ->
-                            scrollToArticle(index)
-                        },
-                        currentAudioUrl = currentAudio?.url,
-                        isAudioPlaying = isAudioPlaying,
-                        isFullscreen = paneExpansion.isFullscreen,
-                        onToggleFullscreen = { paneExpansion.toggleFullscreen() },
-                    )
-                }
+            AnimatedVisibility(
+                visible = search.isActive,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                SearchView(
+                    search = search,
+                    results = searchResults,
+                    selectedArticleID = selectedArticleID,
+                    dimReadArticles = filter.status != ArticleStatus.STARRED,
+                    onSelect = { article -> selectArticle(article) },
+                )
             }
-        )
+        }
+
+        if (isMarkAllReadDialogOpen) {
+            MarkAllReadDialog(
+                onConfirm = {
+                    isMarkAllReadDialogOpen = false
+                    if (markDigestReadPending) {
+                        markDigestReadPending = false
+                        viewModel.markDigestRead(listSummary.digestArticleIds)
+                    } else {
+                        onMarkAllRead(MarkRead.All)
+                    }
+                },
+                onDismissRequest = {
+                    isMarkAllReadDialogOpen = false
+                    markDigestReadPending = false
+                },
+            )
+        }
 
         if (showListSummary) {
             ListSummarySheet(
                 controller = listSummary,
                 onDismiss = {
                     showListSummary = false
-                    returnToSummary = false
                 },
-                onOpenArticle = {
+                onOpenArticle = { articleID ->
                     listSummary.freezeScroll()
                     showListSummary = false
-                    returnToSummary = true
-                    selectArticle(it)
+                    digestSheetReopenPending = true
+                    onSelectArticle(articleID, null)
                 },
                 onMarkAllRead = {
                     markDigestReadPending = true
@@ -777,67 +712,6 @@ fun ArticleScreen(
                     showListSummary = true
                 },
                 onDismiss = { showDigestModeDialog = false },
-            )
-        }
-
-        Box(Modifier.fillMaxSize()) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = returnToSummary && article != null,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 96.dp, end = 20.dp),
-            ) {
-                SmallFloatingActionButton(onClick = {
-                    returnToSummary = false
-                    showListSummary = true
-                }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Notes,
-                        contentDescription = stringResource(R.string.list_summary_back),
-                    )
-                }
-            }
-        }
-
-        LaunchedEffect(scaffoldNavigator.currentDestination) {
-            val isOnList =
-                scaffoldNavigator.currentDestination?.pane != ListDetailPaneScaffoldRole.Detail
-            if (isOnList && article != null) {
-                viewModel.clearArticle()
-            }
-        }
-
-        AnimatedVisibility(
-            enter = fadeIn(),
-            exit = fadeOut(),
-            visible = media != null
-        ) {
-            ArticleMediaView(
-                onDismissRequest = {
-                    media = null
-                },
-                media = media
-            )
-        }
-
-
-        if (isMarkAllReadDialogOpen) {
-            MarkAllReadDialog(
-                onConfirm = {
-                    isMarkAllReadDialogOpen = false
-                    if (markDigestReadPending) {
-                        markDigestReadPending = false
-                        viewModel.markDigestRead(listSummary.digestArticleIds)
-                    } else {
-                        onMarkAllRead(MarkRead.All)
-                    }
-                },
-                onDismissRequest = {
-                    isMarkAllReadDialogOpen = false
-                    markDigestReadPending = false
-                },
             )
         }
 
@@ -876,24 +750,16 @@ fun ArticleScreen(
             )
         }
 
-        BackHandler(media != null) {
-            media = null
-        }
-
-        BackHandler(media == null && article != null) {
-            paneExpansion.reset()
-            closeArticle()
-        }
-
-        BackHandler(media == null && search.isActive && article == null) {
+        BackHandler(search.isActive) {
             search.clear()
         }
 
+        // When a detail is open the list yields back to NavDisplay so it can pop the detail entry.
         ArticleListBackHandler(
             filter,
             onRequestFilter = selectFilter,
             onRequestFolder = selectFolder,
-            enabled = isFeedActive(media, article, search),
+            enabled = selectedArticleID == null && !search.isActive,
             isDrawerOpen = drawerState.isOpen,
             toggleDrawer = {
                 toggleDrawer()
@@ -902,12 +768,6 @@ fun ArticleScreen(
                 closeDrawer()
             }
         )
-
-        LayoutNavigationHandler(
-            enabled = article == null
-        ) {
-            scaffoldNavigator.navigateTo(ListDetailPaneScaffoldRole.List)
-        }
     }
 }
 
@@ -996,31 +856,11 @@ fun rememberSavedSearchActions(viewModel: ArticleScreenViewModel): SavedSearchAc
     }
 }
 
-@Composable
-fun rememberFullContent(viewModel: ArticleScreenViewModel): FullContentFetcher {
-    return remember {
-        FullContentFetcher(
-            fetch = viewModel::fetchFullContentAsync,
-            reset = viewModel::resetFullContent,
-        )
-    }
-}
-
 fun canOpenNextFeed(
     filter: ArticleFilter,
     range: MarkRead,
 ): Boolean {
     return range is MarkRead.All && filter !is ArticleFilter.Articles
-}
-
-fun isFeedActive(
-    media: Media?,
-    article: Article?,
-    search: ArticleSearch
-): Boolean {
-    return media == null &&
-            article == null &&
-            !search.isActive
 }
 
 @OptIn(FlowPreview::class)
@@ -1030,7 +870,6 @@ private fun MarkReadOnScroll(
     articles: LazyPagingItems<Article>,
     scrollHighWaterMark: Int,
     updateScrollHighWaterMark: (Int) -> Unit,
-    clampScrollHighWaterMark: (Int) -> Unit,
     markReadOnScroll: (String) -> Unit,
     resetScrollBehaviorOffset: () -> Unit,
 ) {
@@ -1049,12 +888,6 @@ private fun MarkReadOnScroll(
                     listState.scrollToItem(0)
                     resetScrollBehaviorOffset()
                 }
-        }
-
-        LaunchedEffect(listState) {
-            snapshotFlow { articles.itemCount }
-                .distinctUntilChanged()
-                .collect(clampScrollHighWaterMark)
         }
 
         LaunchedEffect(listState) {

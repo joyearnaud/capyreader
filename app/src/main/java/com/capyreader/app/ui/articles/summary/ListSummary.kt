@@ -20,6 +20,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
+/**
+ * Survives navigation (nav3 disposes the list while the reader is on top),
+ * so the sheet restores its text and scroll position after the user returns
+ * from an article opened out of a reference.
+ */
+var digestSession: Pair<ArticleFilter, ListSummaryStateHolder>? = null
+
+/** Set when a digest reference is tapped: the list reopens the sheet on return. */
+var digestSheetReopenPending = false
+
 class ListSummaryStateHolder {
     var state by mutableStateOf(SummaryUiState())
     var referenceTargets by mutableStateOf(emptyList<String>())
@@ -80,7 +90,11 @@ fun rememberListSummary(
     cache: ListSummaryCache = koinInject(),
 ): ListSummaryController {
     val scope = rememberCoroutineScope()
-    val holder = remember(filter) { ListSummaryStateHolder() }
+    val holder = remember(filter) {
+        digestSession?.takeIf { it.first == filter }?.second ?: ListSummaryStateHolder()
+    }
+    // Publish the live holder so the sheet survives the reader being on top.
+    digestSession = filter to holder
     var activeJob by remember { mutableStateOf<Job?>(null) }
 
     val isConfigured = appPreferences.aiOptions.apiKey.get().isNotBlank()

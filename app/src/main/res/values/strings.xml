@@ -305,6 +305,7 @@
     <string name="full_content_error_forbidden">Fetch blocked by site</string>
     <string name="feed_nav_drawer_title">Feeds</string>
     <string name="search_bar_placeholder">Search</string>
+    <string name="search_no_results">No results found</string>
     <string name="media_save">Save</string>
     <string name="media_save_success">Image saved</string>
     <string name="media_save_failure">Failed to save image</string>
@@ -334,8 +335,6 @@
     <string name="widget_spotlight_see_all">See all</string>
     <string name="widget_spotlight_previous">Previous</string>
     <string name="widget_spotlight_next">Next</string>
-    <string name="settings_gestures_improve_talkback_title">Improve TalkBack</string>
-    <string name="settings_gestures_improve_talkback_subtitle">Disables some settings to improve TalkBack text-to-speech</string>
     <string name="mark_read_position_toolbar">Toolbar</string>
     <string name="mark_read_position_floating_action_button">Floating Action Button</string>
     <string name="mark_all_read_button_position">Mark All Read Button Position</string>
@@ -407,4 +406,9 @@
     <string name="summary_card_truncated">Summary based on the beginning of the article</string>
     <string name="summary_card_resummarize">Re-summarize</string>
     <string name="summary_card_dismiss">Hide</string>
+
+    <string name="reader_play_video">Play video</string>
+    <string name="reader_play_audio">Play audio</string>
+    <string name="reader_article_truncated">This article is too long to show in full.</string>
+    <string name="reader_open_in_browser">Open in browser</string>
 </resources>

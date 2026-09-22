@@ -20,7 +20,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -29,7 +31,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.paging.compose.LazyPagingItems
 import com.capyreader.app.common.AudioEnclosure
 import com.capyreader.app.common.Media
 import com.capyreader.app.preferences.AppPreferences
@@ -47,19 +48,22 @@ import com.capyreader.app.ui.collectChangesWithDefault
 import com.capyreader.app.ui.components.pullrefresh.SwipeRefresh
 import com.capyreader.app.ui.components.LocalSnackbarHost
 import com.jocmp.capy.Article
+import com.jocmp.mallet.LinearArticle
 import org.koin.compose.koinInject
 
 @Composable
 fun ArticleView(
     article: Article,
-    articles: LazyPagingItems<Article>,
+    previousArticleID: String? = null,
+    nextArticleID: String? = null,
     onBackPressed: () -> Unit,
     onToggleRead: () -> Unit,
     onToggleStar: () -> Unit,
     canSaveExternally: Boolean = false,
     onDeletePage: () -> Unit = {},
-    onScrollToArticle: (index: Int) -> Unit,
     onSelectArticle: (id: String) -> Unit,
+    contentRevision: Int = 0,
+    flattened: LinearArticle? = null,
     onSelectMedia: (media: Media) -> Unit,
     onSelectAudio: (audio: AudioEnclosure) -> Unit = {},
     onPauseAudio: () -> Unit = {},
@@ -81,35 +85,25 @@ fun ArticleView(
         }
     }
 
-    val index = remember(
-        article.id,
-        articles.itemCount,
-    ) {
-        articles.itemSnapshotList.indexOfFirst { it?.id == article.id }
-    }
+    val hasPrevious = previousArticleID != null
+    val hasNext = nextArticleID != null
 
-    val previousIndex = index - 1
-    val nextIndex = index + 1
+    val articleScrollStates = rememberArticleScrollStates()
 
-    val hasPrevious = previousIndex > -1 && articles[index - 1] != null
-    val hasNext = nextIndex < articles.itemCount && articles[index + 1] != null
 
-    val previousArticleId = if (hasPrevious) articles[previousIndex]?.id else null
-    val nextArticleId = if (hasNext) articles[nextIndex]?.id else null
+    var pendingDirection by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
     fun selectPrevious() {
-        if (previousIndex < 0) return
-
-        articles[previousIndex]?.let {
-            onSelectArticle(it.id)
+        previousArticleID?.let { id ->
+            pendingDirection = id to ArticleDirection.DOWNWARD
+            onSelectArticle(id)
         }
     }
 
     fun selectNext() {
-        if (nextIndex >= articles.itemCount) return
-
-        articles[nextIndex]?.let {
-            onSelectArticle(it.id)
+        nextArticleID?.let { id ->
+            pendingDirection = id to ArticleDirection.UPWARD
+            onSelectArticle(id)
         }
     }
 
@@ -163,11 +157,16 @@ fun ArticleView(
                         ArticleTransition(
                             article = article,
                             enableHorizontalPager = enableHorizontalPager,
-                            previousArticleId = previousArticleId,
-                            nextArticleId = nextArticleId,
-                        ) { targetArticle ->
+                            previousArticleId = previousArticleID,
+                            nextArticleId = nextArticleID,
+                            contentRevision = contentRevision,
+                            flattened = flattened,
+                            pendingDirection = pendingDirection,
+                        ) { targetArticle, targetFlattened ->
                             ArticleReader(
                                 article = targetArticle,
+                                flattened = targetFlattened,
+                                scrollState = articleScrollStates.scrollState(targetArticle.id),
                                 pinToolbars = pinToolbars,
                                 header = { SummaryCard(summary = LocalSummary.current) },
                                 onSelectMedia = onSelectMedia,
@@ -212,13 +211,6 @@ fun ArticleView(
           }
         }
     }
-
-    LaunchedEffect(index) {
-        if (index > -1) {
-            onScrollToArticle(index)
-        }
-    }
-
 }
 
 @Composable
