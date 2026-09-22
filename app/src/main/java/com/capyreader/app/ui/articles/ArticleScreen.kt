@@ -401,6 +401,23 @@ fun ArticleScreen(
             viewModel.clearArticle()
         }
 
+        // The single user-facing close path (X button and system back/swipe):
+        // both must honor the digest reopen behavior.
+        fun closeArticle() {
+            clearArticle()
+            // Coming back from a digest reference: reopen the digest at the
+            // saved position.
+            if (returnToSummary) {
+                returnToSummary = false
+                showListSummary = true
+            } else if (summariesReturnPending) {
+                // Article opened from the Summaries history: closing it jumps
+                // straight back to the digest.
+                onSummariesReturnConsumed()
+                onNavigateToSummaries()
+            }
+        }
+
         val toggleDrawer = {
             coroutineScope.launch {
                 if (drawerState.isOpen) {
@@ -699,20 +716,7 @@ fun ArticleScreen(
                     ArticleView(
                         article = article,
                         articles = articles,
-                        onBackPressed = {
-                            clearArticle()
-                            // Coming back from a digest reference: reopen the
-                            // digest at the saved position.
-                            if (returnToSummary) {
-                                returnToSummary = false
-                                showListSummary = true
-                            } else if (summariesReturnPending) {
-                                // Article opened from the Summaries history:
-                                // closing it jumps straight back to the digest.
-                                onSummariesReturnConsumed()
-                                onNavigateToSummaries()
-                            }
-                        },
+                        onBackPressed = { closeArticle() },
                         onToggleRead = viewModel::toggleArticleRead,
                         onToggleStar = viewModel::toggleArticleStar,
                         canSaveExternally = canSaveExternally,
@@ -878,7 +882,7 @@ fun ArticleScreen(
 
         BackHandler(media == null && article != null) {
             paneExpansion.reset()
-            clearArticle()
+            closeArticle()
         }
 
         BackHandler(media == null && search.isActive && article == null) {

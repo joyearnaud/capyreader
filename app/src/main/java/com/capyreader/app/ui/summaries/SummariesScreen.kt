@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -84,6 +87,9 @@ sealed class SummaryHistoryItem {
  * the detail reopens directly when an article opened from it is closed.
  */
 private var lastSelectedSummaryId: String? = null
+// Reading position of the digest detail, so closing an article opened from
+// a reference lands back where the link was.
+private var lastSelectedSummaryScroll = 0
 
 private val DIGEST_LIST_TTL: java.time.Duration = java.time.Duration.ofDays(3)
 
@@ -213,6 +219,7 @@ fun SummariesScreen(
                         },
                         modifier = Modifier.clickable {
                             lastSelectedSummaryId = item.id
+                            lastSelectedSummaryScroll = 0
                             selected = item
                         },
                     )
@@ -240,11 +247,29 @@ private fun SummaryDetail(
             }
         }
     }
+    // Restores the reading position (e.g. the link that was tapped). The
+    // initial value cannot be set on the ScrollState: the first layout frame
+    // clamps it to 0 before the content is measured (same race as the sheet),
+    // so jump after the content has height.
+    val scrollState = remember { ScrollState(0) }
+    val restoreTarget = lastSelectedSummaryScroll
+    LaunchedEffect(scrollState, restoreTarget) {
+        if (restoreTarget > 0) {
+            val deadline = System.nanoTime() + 2_000_000_000L
+            while (System.nanoTime() < deadline && scrollState.maxValue < restoreTarget) {
+                withFrameNanos { }
+            }
+            scrollState.scrollTo(minOf(restoreTarget, scrollState.maxValue))
+        }
+    }
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }.collect { lastSelectedSummaryScroll = it }
+    }
 
     CompositionLocalProvider(LocalUriHandler provides uriHandler) {
         Column(
             modifier
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             SummaryContent(
