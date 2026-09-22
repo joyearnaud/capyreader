@@ -40,6 +40,9 @@ import com.capyreader.app.ui.accounts.AddAccountScreen
 import com.capyreader.app.ui.accounts.LoginScreen
 import com.capyreader.app.ui.articles.ArticleDetailScreen
 import com.capyreader.app.ui.articles.ArticleScreen
+import com.capyreader.app.ui.articles.summary.digestSession
+import com.capyreader.app.ui.articles.summary.digestSheetReopenPending
+import com.capyreader.app.ui.summaries.clearSummariesHistoryState
 import com.capyreader.app.ui.articles.LocalArticlePaneExpansion
 import com.capyreader.app.ui.articles.detail.CapyPlaceholder
 import com.capyreader.app.ui.articles.media.MediaSceneStrategy
@@ -133,6 +136,13 @@ fun App(
                 sceneStrategies = listOf(mediaSceneStrategy, listDetailStrategy),
                 entryProvider = entryProvider {
                     entry<Route.AddAccount> {
+                        // Leaving an account: drop process-wide digest state
+                        // so it can never leak across accounts.
+                        LaunchedEffect(Unit) {
+                            digestSession = null
+                            digestSheetReopenPending = false
+                            clearSummariesHistoryState()
+                        }
                         AddAccountScreen(
                             onAddSuccess = { backStack.resetToArticles(appPreferences) },
                             onNavigateToLogin = { source -> backStack.add(Route.Login(source)) }

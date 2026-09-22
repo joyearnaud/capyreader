@@ -91,6 +91,12 @@ private var lastSelectedSummaryId: String? = null
 // a reference lands back where the link was.
 private var lastSelectedSummaryScroll = 0
 
+/** Clear process-wide history state (account switch / logout). */
+fun clearSummariesHistoryState() {
+    lastSelectedSummaryId = null
+    lastSelectedSummaryScroll = 0
+}
+
 private val DIGEST_LIST_TTL: java.time.Duration = java.time.Duration.ofDays(3)
 
 @OptIn(ExperimentalMaterial3Api::class)

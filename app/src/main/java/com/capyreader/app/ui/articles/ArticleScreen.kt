@@ -158,8 +158,11 @@ fun ArticleScreen(
     // The digest's mark-read button targets only the digest's articles.
     var markDigestReadPending by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (digestSheetReopenPending) {
+    LaunchedEffect(selectedArticleID) {
+        // Reopen the sheet when the reader (a separate nav3 entry) closes.
+        // Keyed on selectedArticleID so it also fires on two-pane widths where
+        // the list stays composed under the reader.
+        if (selectedArticleID == null && digestSheetReopenPending) {
             digestSheetReopenPending = false
             showListSummary = true
         }
@@ -554,7 +557,7 @@ fun ArticleScreen(
                                         completion
                                     )
                                 },
-                                onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0) {
+                                onSummarizeList = if (listSummaryScopeLabel != null && statusCount > 0 && listSummary.isConfigured) {
                                     {
                                         showDigestModeDialog = true
                                     }

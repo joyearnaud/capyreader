@@ -380,4 +380,21 @@
     <string name="settings_ai_restore_prompt_title">Rétablir le prompt par défaut ?</string>
     <string name="settings_ai_restore_prompt_text">Ceci remplace votre prompt actuel par le prompt par défaut. Action irréversible.</string>
     <string name="settings_ai_restore_prompt_confirm">Rétablir</string>
+    <string name="settings_panel_ai_title">IA</string>
+    <string name="settings_section_ai_provider">Fournisseur d\'IA</string>
+    <string name="settings_section_ai_prompt">Prompt du résumé</string>
+    <string name="settings_ai_base_url">Point d\'accès API</string>
+    <string name="settings_ai_model">Modèle</string>
+    <string name="settings_ai_api_key">Clé API</string>
+    <string name="settings_ai_api_key_subtitle">Stockée uniquement sur cet appareil</string>
+    <string name="settings_ai_prompt">Prompt</string>
+    <string name="summary_action">Résumer</string>
+    <string name="summary_card_title">Résumé IA</string>
+    <string name="summary_card_truncated">Résumé basé sur le début de l\'article</string>
+    <string name="summary_card_resummarize">Re-résumer</string>
+    <string name="summary_card_dismiss">Masquer</string>
+    <string name="reader_play_video">Lire la vidéo</string>
+    <string name="reader_play_audio">Lire l\'audio</string>
+    <string name="reader_article_truncated">Cet article est trop long pour être affiché en entier.</string>
+    <string name="reader_open_in_browser">Ouvrir dans le navigateur</string>
 </resources>
