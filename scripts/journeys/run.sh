@@ -29,7 +29,7 @@ echo "" >> "$REPORT"
 echo "App: $APP_ID" >> "$REPORT"
 echo "" >> "$REPORT"
 
-WANT="${*:-1 2 3 4 5}"
+WANT="${*:-1 2 3 4 5 6}"
 want() { [[ " $WANT " == *" $1 "* ]]; }
 
 # SAFETY: never send input unless CapyReader is the foreground app.
@@ -155,6 +155,27 @@ if want 5; then
   else
     FAIL=$((FAIL + 1)); step "❌ FAIL: badge not readable ($before → $after)"
   fi
+  crash_check
+  summary
+fi
+
+# ---------------------------------------------------------------------------
+if want 6; then
+  journey "6-list-scroll-restore"
+  # Scroll deep, open the article at the top of the viewport, come back:
+  # the list must land back on that same article.
+  for i in $(seq 1 10); do
+    swipe 640 2100 640 700 200
+    sleep 0.35
+  done
+  pause 2
+  shot "list-deep"
+  tap 568 1250
+  pause 3
+  shot "article"
+  back
+  pause 3
+  shot "list-restored"
   crash_check
   summary
 fi

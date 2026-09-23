@@ -26,6 +26,7 @@ Requirements:
 | 3 | digest-sheet | Scope dialog → generation/DB hit → sheet; reference → article → back → sheet restored |
 | 4 | summaries | Drawer → history list → digest detail → reference → native back |
 | 5 | mark-read-scoped | "Tout marquer comme lu" from the digest only lowers the unread badge by the digest's unread |
+| 6 | list-scroll-restore | Scroll deep, open an article, come back: the list lands on the same article |
 
 Artifacts land in `device-journeys/<UTC timestamp>/`: one folder of
 screenshots per journey plus `report.md` with PASS/FAIL lines. Review the

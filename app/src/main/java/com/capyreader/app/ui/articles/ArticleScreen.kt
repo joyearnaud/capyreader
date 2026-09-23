@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -111,6 +112,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+
+/**
+ * Last list scroll position (index to offset), captured when an article is
+ * tapped and restored when the reader closes. Process-wide: nav3's saved
+ * state restores a stale index across reader round-trips.
+ */
+var lastListScrollPosition: Pair<Int, Int>? = null
+var lastReadArticleID: String? = null
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class, ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
@@ -257,6 +266,48 @@ fun ArticleScreen(
         }
         val listState = articles.rememberLazyListState()
 
+        // Returning from the reader must land back where the tap happened.
+        // nav3's saved-state restore is unreliable here (pager re-emits and
+        // the saved index lags the real position), so track it ourselves.
+        LaunchedEffect(selectedArticleID) {
+            if (selectedArticleID != null) return@LaunchedEffect
+            // Wait for the pager to re-emit (itemCount drops to 0 while the
+            // list entry is disposed under the reader).
+            var waited = 0
+            while (articles.itemCount == 0 && waited < 40) {
+                withFrameNanos { }
+                waited++
+            }
+            val readID = lastReadArticleID
+            if (readID != null) {
+                val index = articles.itemSnapshotList.indexOfFirst { it?.id == readID }
+                if (index >= 0) {
+                    // The read article stays in the list (greyed out) in the
+                    // Unread view, so anchor on it directly.
+                    listState.scrollToItem(index)
+                    lastReadArticleID = null
+                    lastListScrollPosition = null
+                    return@LaunchedEffect
+                }
+            }
+            lastListScrollPosition?.let { (index, offset) ->
+                lastListScrollPosition = null
+                listState.scrollToItem(index, offset)
+            }
+            lastReadArticleID = null
+        }
+
+        // TEMP debug: list scroll restore after returning from the reader.
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            androidx.compose.runtime.snapshotFlow { articles.itemCount }
+                .collect { count ->
+                    android.util.Log.d(
+                        "ListScroll",
+                        "itemCount=$count firstVisible=${listState.firstVisibleItemIndex} offset=${listState.firstVisibleItemScrollOffset}"
+                    )
+                }
+        }
+
         val resetScrollBehaviorOffset = resetScrollBehaviorListener(
             listState = listState,
             scrollBehavior = scrollBehavior
@@ -294,7 +345,12 @@ fun ArticleScreen(
 
         LaunchedEffect(filter, articles.loadState.refresh) {
             val refreshComplete = articles.loadState.refresh is LoadState.NotLoading
+            android.util.Log.d(
+                "ListScroll",
+                "reset-effect: complete=$refreshComplete equal=${filter == scrolledFilter} scrolledFilter=$scrolledFilter filter=$filter"
+            )
             if (refreshComplete && filter != scrolledFilter) {
+                android.util.Log.d("ListScroll", "reset-effect: scrolling to 0")
                 listState.scrollToItem(0)
                 resetScrollBehaviorOffset()
                 setScrolledFilter(filter)
@@ -422,6 +478,9 @@ fun ArticleScreen(
                 linkOpener.open(url.toString().toUri())
             } else {
                 val searchQuery = search.query.takeIf { search.isActive && !it.isNullOrBlank() }
+                lastListScrollPosition =
+                    listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                lastReadArticleID = article.id
                 onSelectArticle(article.id, searchQuery)
             }
         }
