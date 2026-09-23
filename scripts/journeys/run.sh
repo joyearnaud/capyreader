@@ -61,14 +61,20 @@ if want 1; then
   journey "1-launch"
   "$ADB" shell am force-stop "$APP_ID"
   "$ADB" shell monkey -p "$APP_ID" 1 >/dev/null 2>&1
+  # Wait for the app to actually reach the foreground before any input.
+  for _ in $(seq 1 20); do
+    foreground_ok && break
+    sleep 1
+  done
+  abort_if_background
   sleep 4
   # Deterministic start: global Unread status (always populated).
   tap 81 297
   sleep 1.5
   tap_text "Non lus" 295 490
   sleep 1.5
-  "$ADB" shell input keyevent 4
-  sleep 1.5
+  # Selecting a status auto-closes the drawer — no back here: on the root
+  # destination a stray back would send the app to the background.
   shot "list"
   assert_text "Comments" "list rows rendered"
   assert_text "Development\|News\|Tech" "a feed or folder title is visible"
@@ -166,9 +172,11 @@ if want 5; then
   # Close any open digest sheet first.
   swipe 445 1400 445 2600 250; sleep 1.5
   tap 81 297; sleep 2
-  before=$(ui_dump | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
+  refresh_dump; before=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
   step "unread badge before: ${before:-?}"
-  "$ADB" shell input keyevent 4; sleep 1.5
+  # Close the drawer by tapping its scrim — a stray back on the root
+  # destination would send the app to the background.
+  tap 1150 1500; sleep 1.5
   tap 768 297; sleep 2
   tap_text "Tout le contenu" 878 1593
   sleep 8
@@ -184,7 +192,7 @@ if want 5; then
   tap_text "Confirmer" 844 1520
   sleep 3
   tap 81 297; sleep 2
-  after=$(ui_dump | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
+  refresh_dump; after=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
   step "unread badge after: ${after:-?}"
   shot "after-mark"
   if [ -n "$before" ] && [ -n "$after" ] && [ "$after" -lt "$before" ]; then
