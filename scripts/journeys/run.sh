@@ -64,7 +64,7 @@ fi
 if want 2; then
   journey "2-article-native-reader"
   tap 593 510                     # first list row
-  sleep 3.5
+  pause 3
   shot "article"
   back; sleep 2
   crash_check
@@ -78,20 +78,25 @@ if want 3; then
   sleep 2
   shot "scope-dialog"
   tap 878 1593                    # "Tout le contenu"
-  sleep 8
+  pause 6
   shot "sheet-loading-or-hit"
-  # Generation on a miss takes ~50s; poll screenshots until it settles.
-  for i in 1 2 3 4 5 6; do
-    sleep 8
+  # Wait until the sheet settles: on a DB hit it is instant, on a miss
+  # generation takes ~50s. Two byte-identical consecutive shots = done.
+  prev=""
+  for i in $(seq 1 14); do
+    pause 5
     shot "gen-$i"
+    cur="$ART_DIR/${JOURNEY// /_}-gen-$i.png"
+    if [ -n "$prev" ] && cmp -s "$prev" "$cur"; then rm -f "$cur"; break; fi
+    prev="$cur"
   done
   # Scroll into the digest and open a reference (calibrated).
   swipe 640 1900 640 1100 300; sleep 1
   shot "before-ref"
   tap 640 1400
-  sleep 3
+  pause 2
   shot "article-from-ref"
-  back; sleep 3
+  back; pause 2
   shot "sheet-reopened"
   crash_check
   summary
@@ -103,14 +108,14 @@ if want 4; then
   # Close any open digest sheet first: a tap outside it would be eaten.
   swipe 445 1400 445 2600 250; sleep 1.5
   tap 81 297; sleep 2             # drawer
-  tap 295 825; sleep 2.5          # "Résumés" row
+  tap 295 825; pause 2          # "Résumés" row
   shot "summaries-list"
-  tap 515 460; sleep 2.5          # newest entry
+  tap 515 460; pause 2          # newest entry
   shot "history-detail"
   swipe 640 1700 640 1200 300; sleep 1
   tap 640 1400; sleep 3           # a reference link
   shot "history-article"
-  back; sleep 2.5
+  back; pause 2
   shot "history-detail-again"
   crash_check
   summary
@@ -127,7 +132,7 @@ if want 5; then
   step "unread badge before: ${before:-unreadable}"
   tap 1150 1500; sleep 1.5        # scrim closes the drawer (no back!)
   tap 768 297; sleep 2            # summary icon
-  tap 878 1593; sleep 8           # "Tout le contenu"
+  tap 878 1593; pause 6           # "Tout le contenu"
   # The mark-read button sits at the bottom of the sheet content.
   for _ in $(seq 1 6); do
     swipe 640 2100 640 400 120; sleep 0.3
@@ -137,7 +142,7 @@ if want 5; then
   sleep 1.5
   shot "confirm-dialog"
   tap 844 1520                    # "Confirmer"
-  sleep 3
+  pause 2
   tap 81 297; sleep 2             # drawer
   refresh_dump
   after=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)

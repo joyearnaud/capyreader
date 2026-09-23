@@ -49,6 +49,17 @@ abort_if_background() {
   fi
 }
 
+# Sleep that keeps the screen awake: keyevent 224 (WAKE_UP — no tap, safe
+# on an unlocked screen) resets the screen-off timer even when unplugged.
+pause() {
+  local left=$1
+  while [ "$left" -gt 0 ]; do
+    "$ADB" shell input keyevent 224 >/dev/null 2>&1
+    [ "$left" -ge 2 ] && sleep 2 || sleep "$left"
+    left=$((left - 2))
+  done
+}
+
 tap() { abort_if_background; "$ADB" shell input tap "$1" "$2"; }
 swipe() { abort_if_background; "$ADB" shell input swipe "$@"; }
 back() { abort_if_background; "$ADB" shell input keyevent 4; }
