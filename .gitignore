@@ -49,3 +49,10 @@ TODO.md
 tmp/
 
 .claude/worktrees
+
+# Device journey run artifacts (scripts/journeys/run.sh output)
+/device-journeys/
+
+# Generated from docs/fork/maintenance-strategy.md — regenerate, do not edit
+/docs/fork/*.html
+/docs/fork/*.pdf
