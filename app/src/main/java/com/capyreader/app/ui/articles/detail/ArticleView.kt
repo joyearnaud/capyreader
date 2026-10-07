@@ -18,6 +18,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,7 @@ import com.capyreader.app.ui.LocalLinkOpener
 import com.capyreader.app.ui.articles.LocalFullContent
 import com.capyreader.app.ui.articles.summary.LocalSummary
 import com.capyreader.app.ui.articles.summary.SummaryCard
+import com.capyreader.app.ui.articles.reader.PageDirection
 import com.capyreader.app.ui.collectChangesWithDefault
 import com.capyreader.app.ui.components.pullrefresh.SwipeRefresh
 import com.capyreader.app.ui.components.LocalSnackbarHost
@@ -69,6 +71,7 @@ fun ArticleView(
     onPauseAudio: () -> Unit = {},
     currentAudioUrl: String? = null,
     isAudioPlaying: Boolean = false,
+    isAudioBuffering: Boolean = false,
     isFullscreen: Boolean = false,
     onToggleFullscreen: () -> Unit = {},
     appPreferences: AppPreferences = koinInject()
@@ -90,6 +93,8 @@ fun ArticleView(
 
     val articleScrollStates = rememberArticleScrollStates()
 
+
+    var openAtEnd by remember { mutableStateOf<String?>(null) }
 
     var pendingDirection by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
@@ -121,11 +126,19 @@ fun ArticleView(
     val scrollState = rememberArticleScrollState()
     val showToolBar = pinToolbars || !scrollState.isScrollingDown
 
+    val enableTapPaging by appPreferences.readerOptions.enablePagingTapGesture.collectChangesWithDefault()
+
+    SideEffect {
+        scrollState.keepToolbarsHidden = enableTapPaging
+    }
+
     LaunchedEffect(article.id) {
         scrollState.reset()
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    HideNavigationBarWhilePagingEffect(hide = !showToolBar)
 
     val contentPadding = rememberContentPadding(pinToolbars)
 
@@ -169,11 +182,25 @@ fun ArticleView(
                                 scrollState = articleScrollStates.scrollState(targetArticle.id),
                                 pinToolbars = pinToolbars,
                                 header = { SummaryCard(summary = LocalSummary.current) },
+                                showToolbars = showToolBar,
+                                onHideToolbars = { scrollState.hideToolbars() },
+                                onToggleToolbars = { scrollState.toggleToolbars() },
+                                onTurnPastArticle = { direction ->
+                                    if (direction == PageDirection.FORWARD) {
+                                        selectNext()
+                                    } else {
+                                        openAtEnd = previousArticleID
+                                        selectPrevious()
+                                    }
+                                },
+                                openAtEnd = targetArticle.id == openAtEnd,
+                                onOpenedAtEnd = { openAtEnd = null },
                                 onSelectMedia = onSelectMedia,
                                 onSelectAudio = onSelectAudio,
                                 onPauseAudio = onPauseAudio,
                                 currentAudioUrl = currentAudioUrl,
                                 isAudioPlaying = isAudioPlaying,
+                                isAudioBuffering = isAudioBuffering,
                             )
                         }
                     }

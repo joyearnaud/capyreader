@@ -65,33 +65,38 @@ internal class SavedSearchRecords(private val database: Database) {
     }
 
     internal fun deleteOrphanedEntries(savedSearchID: String, excludedIDs: List<String>) {
-        savedSearchQueries.deleteOrphanedEntries(savedSearchID, excludedIDs = excludedIDs)
-    }
+        val keptIDs = excludedIDs.toSet()
 
-    internal suspend fun updateShowUnreadBadge(id: String, enabled: Boolean) = withIOContext {
-        savedSearchQueries.updateShowUnreadBadge(
-            enabled = enabled,
-            id = id
-        )
-    }
-
-    internal suspend fun toggleAllShowUnreadBadge(enabled: Boolean) = withIOContext {
-        savedSearchQueries.toggleAllShowUnreadBadge(enabled = enabled)
+        database.transaction {
+            savedSearchQueries
+                .articlesBySavedSearchID(savedSearchID)
+                .executeAsList()
+                .filterNot { keptIDs.contains(it) }
+                .chunked(MAX_IDS_PER_QUERY)
+                .forEach { batchIDs ->
+                    savedSearchQueries.deleteArticles(
+                        savedSearchID = savedSearchID,
+                        articleIDs = batchIDs,
+                    )
+                }
+        }
     }
 
     private fun mapper(
         id: String,
         name: String,
         query: String?,
-        showUnreadBadge: Boolean = true,
     ) =
         SavedSearch(
             id = id,
             name = name,
             query = query,
-            showUnreadBadge = showUnreadBadge,
         )
 
     private val savedSearchQueries
         get() = database.saved_searchesQueries
+
+    companion object {
+        private const val MAX_IDS_PER_QUERY = 500
+    }
 }

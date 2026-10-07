@@ -7,14 +7,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarDefaults.pinnedScrollBehavior
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.capyreader.app.R
 import com.capyreader.app.ui.articles.FilterActionMenu
 import com.capyreader.app.ui.articles.FilterAppBarTitle
-import androidx.compose.ui.res.stringResource
-import com.capyreader.app.R
+import com.capyreader.app.ui.articles.listPaneInsets
 import com.capyreader.app.ui.components.ArticleSearch
 import com.jocmp.capy.ArticleFilter
 import com.jocmp.capy.Feed
@@ -42,6 +44,7 @@ fun ArticleListTopBar(
     // to launch it; the active-search field/back-arrow used to live here.
     TopAppBar(
         scrollBehavior = scrollBehavior,
+        windowInsets = TopAppBarDefaults.windowInsets.listPaneInsets(),
         title = {
             FilterAppBarTitle(
                 filter = filter,
@@ -57,7 +60,7 @@ fun ArticleListTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Menu,
-                    contentDescription = null
+                    contentDescription = stringResource(R.string.feed_nav_drawer_open)
                 )
             }
         },

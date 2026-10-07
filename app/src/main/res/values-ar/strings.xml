@@ -210,8 +210,6 @@
     <string name="reader_image_visibility_always_hide">احظر الصور</string>
     <string name="reader_image_visibility_always_show">اعرض الصور دائمًا</string>
     <string name="reader_image_visibility_label">الصور</string>
-    <string name="settings_gestures_reader_tap_to_page_title">النقر لتمرير</string>
-    <string name="settings_gestures_reader_tap_to_page_subtitle">إضغط على الزوايا السفلية للتمرير محتوى المقالة</string>
     <string name="settings_enable_high_contrast_dark_theme">تمكين المظهر الداكن عالي التباين</string>
     <string name="auth_fields_username">إسم المستخدم</string>
     <string name="settings_donate_button">تبرع</string>
@@ -270,10 +268,6 @@
     <string name="filters_supporting_text">إزالة المقالات التي تحتوي على عنوان أو محتوى تطابق الكلمات المفتاحية</string>
     <string name="add_account_miniflux_signup_link_text">اكتشف المزيد.</string>
     <string name="add_account_miniflux_signup_prompt">أليس لديك نسخة Miniflux؟</string>
-    <string name="mark_read_position_toolbar">شريط اﻷدوات</string>
-    <string name="mark_read_position_floating_action_button">زر الإجراء العائم</string>
-    <string name="mark_all_read_button_position">موضع زر وضع علامة \"قراءة الكل\"</string>
-    <string name="settings_display_miscellaneous_title">متفرقات</string>
     <string name="open_articles_in_browser">افتح المقالات في المتصفح</string>
     <string name="theme_dynamic">ديناميكي</string>
     <string name="theme_newsprint">ورق الجرائد</string>
@@ -306,11 +300,6 @@
     <string name="auth_fields_miniflux_use_password">استخدم كلمة المرور بدلاً من ذلك</string>
     <string name="auth_fields_show_advanced">خيارات متقدمة</string>
     <string name="auth_fields_hide_advanced">أخفِ الإعدادات المتقدمة</string>
-    <string name="settings_panel_unread_counts_title">شارات غير مقروءة</string>
-    <string name="settings_option_badge_style">نمط الشارة</string>
-    <string name="badge_style_simple">بسيط</string>
-    <string name="badge_style_exact">بالضبط</string>
-    <string name="show_unread_badge">أظهر شارة غير المقروءة</string>
     <string name="add_link_title">أضف رابط</string>
     <string name="tab_add_feed">أضف موجز</string>
     <string name="tab_save_page">احفظ الصفحة</string>
@@ -356,4 +345,7 @@
     <string name="article_list_new_articles_pill">مقالات جديدة</string>
     <string name="settings_refresh_on_wifi_only">التحديث عبر شبكة Wi-Fi فقط</string>
     <string name="refresh_skipped_mobile">تخطي التحديث عبر شبكة الجوّال</string>
+    <string name="mark_read_position_toolbar">شريط اﻷدوات</string>
+    <string name="mark_read_position_floating_action_button">زر الإجراء العائم</string>
+    <string name="mark_all_read_button_position">موضع زر وضع علامة \"قراءة الكل\"</string>
 </resources>

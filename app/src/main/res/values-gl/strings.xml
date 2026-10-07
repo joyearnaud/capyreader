@@ -175,8 +175,6 @@
     <string name="article_list_row_swipe_open_externally">Abrir artigo no navegador</string>
     <string name="settings_confirm_mark_all_read">Confirmar marcar todo como lido</string>
     <string name="settings_mark_read_on_scroll">Marcar como lido ao desprazarte</string>
-    <string name="settings_gestures_reader_tap_to_page_title">Toque eReader para desprazar</string>
-    <string name="settings_gestures_reader_tap_to_page_subtitle">Toca nos cantos inferiores para navegar no contido do artigo</string>
     <string name="settings_enable_high_contrast_dark_theme">Activar decorado escuro de alto contraste</string>
     <string name="settings_section_mark_all_as_read">Marcar Todo Como Lido</string>
     <string name="settings_section_browser">Navegador</string>
@@ -259,10 +257,6 @@
     <string name="settings_options_reader_pin_top_toolbar">Fixar Ferramentas</string>
     <string name="add_account_miniflux_signup_prompt">Non tes unha instancia Miniflux?</string>
     <string name="add_account_miniflux_signup_link_text">Coñece máis.</string>
-    <string name="mark_read_position_toolbar">Barra de ferramentas</string>
-    <string name="mark_read_position_floating_action_button">Botón flotante de acción</string>
-    <string name="mark_all_read_button_position">Posición do botón para marcar todo lido</string>
-    <string name="settings_display_miscellaneous_title">Varios</string>
     <string name="settings_article_list_shorten_titles">Acurtar títulos</string>
     <string name="open_articles_in_browser">Abrir artigos no navegador</string>
     <string name="auth_fields_client_certificate">Certificado cliente (optativo)</string>
@@ -298,11 +292,6 @@
     <string name="auth_fields_miniflux_use_password">Alternativa, usar contrasinal</string>
     <string name="auth_fields_show_advanced">Opcións avanzadas</string>
     <string name="auth_fields_hide_advanced">Ocultar opcións avanzadas</string>
-    <string name="settings_panel_unread_counts_title">Marcas de non lidos</string>
-    <string name="settings_option_badge_style">Estilo da marca</string>
-    <string name="badge_style_simple">Simple</string>
-    <string name="badge_style_exact">Exacto</string>
-    <string name="show_unread_badge">Mostrar marca de non lidos</string>
     <string name="add_link_title">Engadir Ligazón</string>
     <string name="tab_add_feed">Engadir Canle</string>
     <string name="tab_save_page">Gardar Páxina</string>
@@ -349,4 +338,7 @@
     <string name="article_list_new_articles_pill">Novos artigos</string>
     <string name="settings_refresh_on_wifi_only">Actualizar só con Wi-Fi</string>
     <string name="refresh_skipped_mobile">Omítese a actualización usando rede móbil</string>
+    <string name="mark_read_position_toolbar">Barra de ferramentas</string>
+    <string name="mark_read_position_floating_action_button">Botón flotante de acción</string>
+    <string name="mark_all_read_button_position">Posición do botón para marcar todo lido</string>
 </resources>

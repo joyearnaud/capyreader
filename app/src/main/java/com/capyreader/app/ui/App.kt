@@ -78,7 +78,6 @@ fun App(
     val windowAdaptiveInfo = currentWindowAdaptiveInfoV2()
     val directive = remember(windowAdaptiveInfo) {
         calculatePaneScaffoldDirective(windowAdaptiveInfo)
-            .copy(horizontalPartitionSpacerSize = 0.dp)
     }
     val mediaSceneStrategy = remember { MediaSceneStrategy() }
     val paneExpansion = rememberArticlePaneExpansion()
@@ -190,6 +189,7 @@ fun App(
                             },
                             onNavigateToSettings = { backStack.add(Route.Settings) },
                             onNavigateToSummaries = { backStack.add(Route.Summaries) },
+                            onCloseArticle = { backStack.closeArticle() },
                             selectedArticleID = (backStack.lastOrNull() as? Route.ArticleDetail)?.articleID,
                         )
                     }
@@ -268,6 +268,10 @@ private fun NavBackStack<NavKey>.openArticle(articleID: String, searchQuery: Str
     } else {
         add(Route.ArticleDetail(articleID, searchQuery))
     }
+}
+
+private fun NavBackStack<NavKey>.closeArticle() {
+    removeAll { it is Route.ArticleDetail }
 }
 
 /** Replaces the entire back stack with [key] (account add/remove transitions). */

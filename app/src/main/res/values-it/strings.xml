@@ -203,8 +203,6 @@
     <string name="add_account_freshrss_signup_prompt">Non hai un\'istanza FreshRSS?</string>
     <string name="add_account_feedbin_subtitle">feedbin.com</string>
     <string name="add_account_freshrss_signup_link_text">Per saperne di più.</string>
-    <string name="settings_gestures_reader_tap_to_page_subtitle">Tocca gli angoli inferiori per navigare nel contenuto dell\'articolo</string>
-    <string name="settings_gestures_reader_tap_to_page_title">Dispositivi E-Ink tocca per scorrere</string>
     <string name="settings_enable_high_contrast_dark_theme">Abilita il tema scuro ad alto contrasto</string>
     <string name="settings_mark_read_on_scroll">Scorrendo verso il basso</string>
     <string name="settings_section_mark_all_as_read">Marca tutto come letto</string>
@@ -269,10 +267,6 @@
     <string name="settings_options_reader_pin_top_toolbar">Fissa la barra degli strumenti</string>
     <string name="add_account_miniflux_signup_link_text">Per saperne di più.</string>
     <string name="add_account_miniflux_signup_prompt">Hai un\'istanza Miniflux?</string>
-    <string name="mark_read_position_toolbar">Barra degli strumenti</string>
-    <string name="mark_read_position_floating_action_button">Pulsante azione fluttuante</string>
-    <string name="mark_all_read_button_position">Imposta la posizione del pulsante per segnare tutte le voci come lette</string>
-    <string name="settings_display_miscellaneous_title">Varie</string>
     <string name="open_articles_in_browser">Apri gli articoli nel browser</string>
     <string name="theme_dynamic">Dinamico</string>
     <string name="theme_newsprint">Carta di giornale</string>
@@ -316,11 +310,6 @@
     <string name="auth_fields_miniflux_use_password">Utilizza la password</string>
     <string name="auth_fields_show_advanced">Opzioni avanzate</string>
     <string name="auth_fields_hide_advanced">Nascondi opzioni avanzate</string>
-    <string name="settings_panel_unread_counts_title">Badge non letti</string>
-    <string name="settings_option_badge_style">Stile Badge</string>
-    <string name="badge_style_simple">Semplice</string>
-    <string name="badge_style_exact">Esatto</string>
-    <string name="show_unread_badge">Mostra badge non letti</string>
     <string name="article_actions_delete_page">Elimina pagina</string>
     <string name="article_actions_delete_page_title">Elimina</string>
     <string name="article_actions_delete_page_message">Sei sicuro di voler eliminare questa pagina?</string>
@@ -356,4 +345,7 @@
     <string name="article_list_new_articles_pill">Nuovi articoli</string>
     <string name="settings_refresh_on_wifi_only">Aggiorna solo tramite Wi-Fi</string>
     <string name="refresh_skipped_mobile">Aggiornamento saltato sulla rete mobile</string>
+    <string name="mark_read_position_toolbar">Barra degli strumenti</string>
+    <string name="mark_read_position_floating_action_button">Pulsante azione fluttuante</string>
+    <string name="mark_all_read_button_position">Imposta la posizione del pulsante per segnare tutte le voci come lette</string>
 </resources>

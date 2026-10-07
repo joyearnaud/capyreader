@@ -1,6 +1,10 @@
 package com.capyreader.app.ui.articles.detail
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,16 +15,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import com.capyreader.app.R
@@ -36,11 +41,15 @@ import com.capyreader.app.ui.articles.ColumnScrollbar
 import com.capyreader.app.ui.articles.media.ImageSaver
 import com.capyreader.app.ui.articles.reader.AnchorRegistry
 import com.capyreader.app.ui.articles.reader.ArticleReaderContent
+import com.capyreader.app.ui.articles.reader.LocalReaderPageHeight
+import com.capyreader.app.ui.articles.reader.PageDirection
 import com.capyreader.app.ui.articles.reader.LocalReaderStyle
 import com.capyreader.app.ui.articles.reader.ReaderActions
+import com.capyreader.app.ui.articles.reader.RestoreReadingPositionEffect
 import com.capyreader.app.ui.articles.reader.galleryItems
 import com.capyreader.app.ui.articles.reader.largestSource
 import com.capyreader.app.ui.articles.reader.rememberReaderStyle
+import com.capyreader.app.ui.collectChangesWithCurrent
 import com.capyreader.app.ui.components.LocalSnackbarHost
 import com.capyreader.app.ui.components.rememberSaveableShareLink
 import com.jocmp.capy.Article
@@ -58,11 +67,19 @@ fun ArticleReader(
     scrollState: ScrollState,
     pinToolbars: Boolean,
     header: (@Composable () -> Unit)? = null,
+    showToolbars: Boolean,
+    onHideToolbars: () -> Unit,
+    onToggleToolbars: () -> Unit,
+    onTurnPastArticle: (PageDirection) -> Unit,
+    openAtEnd: Boolean,
+    onOpenedAtEnd: () -> Unit,
     onSelectMedia: (media: Media) -> Unit,
     onSelectAudio: (audio: AudioEnclosure) -> Unit = {},
     onPauseAudio: () -> Unit = {},
     currentAudioUrl: String? = null,
     isAudioPlaying: Boolean = false,
+    isAudioBuffering: Boolean = false,
+    appPreferences: AppPreferences = koinInject(),
 ) {
     val (shareLink, setShareLink) = rememberSaveableShareLink()
     val (shareImageUrl, setImageUrl) = rememberSaveable { mutableStateOf<String?>(null) }
@@ -118,6 +135,29 @@ fun ArticleReader(
 
     val anchors = remember(scrollState) { AnchorRegistry(scrollState) }
 
+    RestoreReadingPositionEffect(
+        articleID = article.id,
+        anchors = anchors,
+        scrollState = scrollState,
+    )
+
+    LaunchedEffect(openAtEnd) {
+        if (!openAtEnd) {
+            return@LaunchedEffect
+        }
+
+        onOpenedAtEnd()
+
+        var pinnedEnd = 0
+
+        snapshotFlow { scrollState.maxValue }.collect { end ->
+            if (scrollState.value >= pinnedEnd) {
+                scrollState.scrollTo(end)
+                pinnedEnd = end
+            }
+        }
+    }
+
     val currentFlattened by rememberUpdatedState(flattened)
     val currentOnSelectMedia by rememberUpdatedState(onSelectMedia)
     val currentOnSelectAudio by rememberUpdatedState(onSelectAudio)
@@ -154,6 +194,7 @@ fun ArticleReader(
             onAudioClick = { url ->
                 currentOnSelectAudio(
                     AudioEnclosure(
+                        articleID = currentArticle.id,
                         url = url,
                         title = currentArticle.title,
                         feedName = currentArticle.feedName,
@@ -168,12 +209,20 @@ fun ArticleReader(
     val showImages = rememberImageVisibility()
     val readerStyle = rememberReaderStyle(showImages = showImages)
 
-    CompositionLocalProvider(LocalReaderStyle provides readerStyle) {
+    CompositionLocalProvider(
+        LocalReaderStyle provides readerStyle,
+    ) {
         ScrollableArticle(
             scrollState = scrollState,
             pinToolbars = pinToolbars,
             header = header,
-            onContentPositioned = { anchors.contentCoordinates = it },
+            showToolbars = showToolbars,
+            onHideToolbars = onHideToolbars,
+            onToggleToolbars = onToggleToolbars,
+            onTurnPastArticle = onTurnPastArticle,
+            onContentPositioned = {
+                anchors.contentCoordinates = it
+            },
         ) {
             ArticleReaderContent(
                 article = article,
@@ -182,6 +231,7 @@ fun ArticleReader(
                 onOpenExternalLink = openExternalLink,
                 currentAudioUrl = currentAudioUrl,
                 isAudioPlaying = isAudioPlaying,
+                isAudioBuffering = isAudioBuffering,
                 onSelectAudio = onSelectAudio,
                 onPauseAudio = onPauseAudio,
                 onElementPositioned = { index, coordinates -> anchors.register(index, coordinates) },
@@ -215,31 +265,41 @@ private fun ScrollableArticle(
     scrollState: ScrollState,
     pinToolbars: Boolean,
     header: (@Composable () -> Unit)? = null,
+    showToolbars: Boolean,
+    onHideToolbars: () -> Unit,
+    onToggleToolbars: () -> Unit,
+    onTurnPastArticle: (PageDirection) -> Unit,
     onContentPositioned: (coordinates: androidx.compose.ui.layout.LayoutCoordinates) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    var maxHeight by remember { mutableFloatStateOf(0f) }
-
-    CornerTapGestureScroll(
-        maxArticleHeight = maxHeight,
+    PageTurnGestures(
         scrollState = scrollState,
         pinToolbars = pinToolbars,
+        showToolbars = showToolbars,
+        onHideToolbars = onHideToolbars,
+        onToggleToolbars = onToggleToolbars,
+        onTurnPastArticle = onTurnPastArticle,
     ) {
-        ColumnScrollbar(state = scrollState) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .onGloballyPositioned { coordinates ->
-                        maxHeight = coordinates.size.height.toFloat()
-                        onContentPositioned(coordinates)
+        BoxWithConstraints {
+            val pageHeight = maxHeight - WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+
+            ColumnScrollbar(state = scrollState) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState)
+                        .onGloballyPositioned { coordinates ->
+                            onContentPositioned(coordinates)
+                        }
+                ) {
+                    if (!pinToolbars) {
+                        Spacer(Modifier.height(ArticleBarDefaults.topBarOffset))
                     }
-            ) {
-                if (!pinToolbars) {
-                    Spacer(Modifier.height(ArticleBarDefaults.topBarOffset))
+                    header?.invoke()
+                    CompositionLocalProvider(LocalReaderPageHeight provides pageHeight) {
+                        content()
+                    }
                 }
-                header?.invoke()
-                content()
             }
         }
     }

@@ -24,6 +24,7 @@ import com.capyreader.app.ui.widget.WidgetUpdater
 import com.jocmp.capy.Account
 import com.jocmp.capy.Article
 import com.jocmp.capy.ArticleFilter
+import com.jocmp.capy.accounts.Source
 import com.jocmp.capy.articles.SortOrder
 import com.jocmp.capy.ArticleStatus
 import com.jocmp.capy.ArticleStatus.UNREAD
@@ -41,17 +42,22 @@ import com.jocmp.capy.common.withUIContext
 import com.jocmp.capy.countToday
 import com.jocmp.capy.logging.CapyLog
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import java.time.OffsetDateTime
 import kotlin.time.Duration
@@ -76,7 +82,13 @@ class ArticleScreenViewModel(
         refreshSkipReason = null
     }
 
-    val filter = appPreferences.filter.stateIn(viewModelScope)
+    private val listSession = MutableStateFlow(
+        ListSession(filter = appPreferences.filter.get(), since = OffsetDateTime.now())
+    )
+
+    private val _filter = MutableStateFlow(listSession.value.filter)
+
+    val filter: StateFlow<ArticleFilter> = _filter
 
     val listSwipeBottom =
         appPreferences.articleListOptions.swipeBottom.stateIn(viewModelScope)
@@ -107,11 +119,7 @@ class ArticleScreenViewModel(
     val markReadOnScrollEnabled: Boolean
         get() = appPreferences.articleListOptions.markReadOnScroll.get()
 
-    val articlesSince = MutableStateFlow<OffsetDateTime>(OffsetDateTime.now())
-
     private var _showUnauthorizedMessage by mutableStateOf(UnauthorizedMessageState.HIDE)
-
-    val sortOrder = appPreferences.articleListOptions.sortOrder.stateIn(viewModelScope)
 
     val afterReadAll =
         appPreferences.articleListOptions.afterReadAllBehavior.stateIn(viewModelScope)
@@ -126,19 +134,47 @@ class ArticleScreenViewModel(
 
     // The list pager is filter-only: it must stay in lockstep with the reader's neighbor query
     // (which keys off the persisted filter), so search no longer participates here.
-    val articles: Flow<PagingData<Article>> =
-        combine(filter, articlesSince, sortOrder) { filter, since, sort ->
-            ArticlePagerKey(filter = filter, query = null, since = since, sort = sort)
-        }.flatMapLatest(::pagerFlow)
-            .cachedIn(viewModelScope)
+    private var articleListScope: CoroutineScope? = null
+
+    private var articleListKey = listPagerKey(listSession.value, sortOrder(listSession.value.filter))
+
+    private val _articleList = MutableStateFlow(buildArticleList(articleListKey))
+
+    val articleList: StateFlow<ArticleListPage> = _articleList
 
     // Search has its own pager so it can filter freely without disturbing the list above.
     val searchResults: Flow<PagingData<Article>> =
-        combine(_searchQuery, filter, articlesSince, sortOrder) { query, filter, since, sort ->
-            ArticlePagerKey(filter = filter, query = query, since = since, sort = sort)
+        combine(_searchQuery, listSession.flatMapLatest(::listPagerKeys)) { query, key ->
+            key.copy(query = query)
         }.flatMapLatest { key ->
             if (key.query.isNullOrBlank()) flowOf(PagingData.empty()) else pagerFlow(key)
         }.cachedIn(viewModelScope)
+
+    private fun listPagerKey(session: ListSession, sort: SortOrder) =
+        ArticlePagerKey(filter = session.filter, query = null, since = session.since, sort = sort)
+
+    private fun listPagerKeys(session: ListSession): Flow<ArticlePagerKey> =
+        appPreferences.articleListOptions.getSortOrder(session.filter).changes().map { sort ->
+            listPagerKey(session, sort)
+        }
+
+    private fun sortOrder(filter: ArticleFilter) =
+        appPreferences.articleListOptions.getSortOrder(filter).get()
+
+    private fun buildArticleList(key: ArticlePagerKey): ArticleListPage {
+        articleListScope?.cancel()
+
+        val parent = viewModelScope.coroutineContext
+        val scope = CoroutineScope(parent + SupervisorJob(parent.job))
+        articleListScope = scope
+        articleListKey = key
+
+        return ArticleListPage(
+            filter = key.filter,
+            sortOrder = key.sort,
+            articles = pagerFlow(key).cachedIn(scope),
+        )
+    }
 
     private fun pagerFlow(key: ArticlePagerKey): Flow<PagingData<Article>> =
         account.buildArticlePager(
@@ -168,7 +204,7 @@ class ArticleScreenViewModel(
 
     val allFeeds = account.taggedFeeds
 
-    val showOnboarding = allFeeds.map { it.isEmpty() }
+    val showOnboarding = allFeeds.map { it.isEmpty() && account.source == Source.LOCAL }
 
     val allSavedSearches = account.savedSearches
 
@@ -291,6 +327,22 @@ class ArticleScreenViewModel(
 
     init {
         viewModelScope.launch {
+            listSession.flatMapLatest(::listPagerKeys).collect { key ->
+                if (key != articleListKey) {
+                    _articleList.value = buildArticleList(key)
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            appPreferences.filter.changes().collect { persisted ->
+                if (persisted != latestFilter) {
+                    applyFilter(persisted)
+                }
+            }
+        }
+
+        viewModelScope.launch {
             sidebarListener.collect {
                 _sidebarItem.value = it
             }
@@ -374,9 +426,9 @@ class ArticleScreenViewModel(
             val articleIDs = account.unreadArticleIDs(
                 filter = filter,
                 range = range,
-                sortOrder = sortOrder.value,
+                sortOrder = sortOrder(filter),
                 query = query,
-                since = articlesSince.value,
+                since = listSession.value.since,
             )
 
             account.markAllRead(articleIDs)
@@ -421,12 +473,18 @@ class ArticleScreenViewModel(
 
     fun removeFeed(
         feedID: String,
+        completion: (result: Result<Unit>) -> Unit,
     ) {
         viewModelScope.launchIO {
-            account.removeFeed(feedID = feedID)
-                .onSuccess {
+            account.removeFeed(feedID = feedID).fold(
+                onSuccess = {
                     resetToDefaultFilter()
+                    completion(Result.success(Unit))
+                },
+                onFailure = {
+                    completion(Result.failure(it))
                 }
+            )
         }
     }
 
@@ -558,7 +616,7 @@ class ArticleScreenViewModel(
             mapOf(
                 "articleID" to articleID,
                 "range" to range.toString(),
-                "sortOrder" to sortOrder.value.toString(),
+                "sortOrder" to sortOrder(latestFilter).toString(),
                 "highWaterMark" to _scrollHighWaterMark,
             )
         )
@@ -567,9 +625,9 @@ class ArticleScreenViewModel(
             val articleIDs = account.unreadArticleIDs(
                 filter = latestFilter,
                 range = range,
-                sortOrder = sortOrder.value,
+                sortOrder = sortOrder(latestFilter),
                 query = _searchQuery.value,
-                since = articlesSince.value,
+                since = listSession.value.since,
             )
 
             CapyLog.debug(
@@ -653,17 +711,28 @@ class ArticleScreenViewModel(
     }
 
     private fun updateFilter(filter: ArticleFilter) {
+        applyFilter(filter)
+
         appPreferences.filter.set(filter)
+    }
+
+    private fun applyFilter(filter: ArticleFilter) {
+        _filter.value = filter
 
         resetScrollHighWaterMark()
 
-        updateArticlesSince()
+        startListSession(filter)
     }
 
     private fun updateArticlesSince() {
-        articlesSince.value = OffsetDateTime.now().plusSeconds(1)
+        startListSession(latestFilter)
+    }
+
+    private fun startListSession(filter: ArticleFilter) {
+        val session = ListSession(filter = filter, since = OffsetDateTime.now().plusSeconds(1))
+        listSession.value = session
         // Share the list's session cutoff so the reader's neighbor pinning matches the list exactly.
-        articleCutoff.set(articlesSince.value)
+        articleCutoff.set(session.since)
     }
 
     private fun copyFolderCounts(
@@ -721,18 +790,6 @@ class ArticleScreenViewModel(
         viewModelScope.launchIO {
             account.updateOpenInBrowser(feedID, enabled = enabled)
             WidgetUpdater.update(context = application.applicationContext)
-        }
-    }
-
-    fun toggleFeedUnreadBadge(feedID: String, enabled: Boolean) {
-        viewModelScope.launchIO {
-            account.toggleFeedUnreadBadge(feedID, enabled)
-        }
-    }
-
-    fun toggleSavedSearchUnreadBadge(id: String, enabled: Boolean) {
-        viewModelScope.launchIO {
-            account.toggleSavedSearchUnreadBadge(id, enabled)
         }
     }
 
@@ -817,4 +874,15 @@ private data class ArticlePagerKey(
     val query: String?,
     val since: OffsetDateTime,
     val sort: SortOrder,
+)
+
+class ArticleListPage(
+    val filter: ArticleFilter,
+    val sortOrder: SortOrder,
+    val articles: Flow<PagingData<Article>>,
+)
+
+private data class ListSession(
+    val filter: ArticleFilter,
+    val since: OffsetDateTime,
 )

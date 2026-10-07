@@ -5,12 +5,15 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -22,16 +25,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -48,46 +52,39 @@ import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.capyreader.app.R
-import com.capyreader.app.common.Media
 import com.capyreader.app.common.Saver
 import com.capyreader.app.common.asState
 import com.capyreader.app.preferences.AfterReadAllBehavior
 import com.capyreader.app.preferences.AppPreferences
 import com.capyreader.app.preferences.ArticleListVerticalSwipe
-import com.capyreader.app.ui.LocalBadgeStyle
+import com.capyreader.app.ui.LocalAppDrawer
 import com.capyreader.app.ui.LocalConnectivity
 import com.capyreader.app.ui.LocalLinkOpener
 import com.capyreader.app.ui.LocalMarkAllReadButtonPosition
 import com.capyreader.app.ui.LocalTimeFormats
 import com.capyreader.app.ui.LocalUnreadCount
+import com.capyreader.app.ui.articles.audio.AudioMiniPlayer
 import com.capyreader.app.ui.articles.summary.DigestModeDialog
 import com.capyreader.app.ui.articles.summary.ListSummarySheet
 import com.capyreader.app.ui.articles.summary.digestSheetReopenPending
 import com.capyreader.app.ui.articles.summary.rememberListSummary
 import com.capyreader.app.ui.navigationTitle
 import com.capyreader.app.ui.articles.audio.AudioPlayerController
-import com.capyreader.app.ui.articles.audio.FloatingAudioPlayer
 import com.capyreader.app.ui.articles.feeds.AngleRefreshState
 import com.capyreader.app.ui.articles.feeds.FeedActions
 import com.capyreader.app.ui.articles.feeds.FeedList
 import com.capyreader.app.ui.articles.feeds.FolderActions
 import com.capyreader.app.ui.articles.feeds.LocalFeedActions
 import com.capyreader.app.ui.articles.feeds.LocalFolderActions
-import com.capyreader.app.ui.articles.feeds.LocalSavedSearchActions
-import com.capyreader.app.ui.articles.feeds.SavedSearchActions
 import com.capyreader.app.ui.articles.list.ArticleListTopBar
 import com.capyreader.app.ui.articles.list.EmptyOnboardingView
 import com.capyreader.app.ui.articles.list.LabelBottomSheet
 import com.capyreader.app.ui.articles.list.LocalMarkAllRead
-import com.capyreader.app.ui.articles.list.MarkAllReadButton
 import com.capyreader.app.ui.articles.list.MarkAllReadDialog
-import com.capyreader.app.ui.articles.list.SwipeUpActionBox
-import com.capyreader.app.ui.articles.list.resetScrollBehaviorListener
-import com.capyreader.app.ui.articles.media.ArticleMediaView
-import com.capyreader.app.ui.collectChangesWithCurrent
-import com.capyreader.app.ui.collectChangesWithDefault
-import com.capyreader.app.ui.LocalAppDrawer
+import com.capyreader.app.ui.articles.list.ResetScrollBehaviorEffect
 import com.capyreader.app.ui.articles.list.SearchView
+import com.capyreader.app.ui.articles.list.SwipeUpActionBox
+import com.capyreader.app.ui.collectChangesWithCurrent
 import com.capyreader.app.ui.components.ArticleSearch
 import com.capyreader.app.ui.components.LocalSnackbarHost
 import com.capyreader.app.ui.components.SearchState
@@ -127,6 +124,7 @@ fun ArticleScreen(
     onSelectArticle: (articleID: String, searchQuery: String?) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSummaries: () -> Unit = {},
+    onCloseArticle: () -> Unit = {},
     viewModel: ArticleScreenViewModel = koinViewModel(),
     appPreferences: AppPreferences = koinInject(),
     selectedArticleID: String? = null,
@@ -187,7 +185,6 @@ fun ArticleScreen(
     val articleActions = rememberArticleActions(viewModel)
     val folderActions = rememberFolderActions(viewModel)
     val feedActions = rememberFeedActions(viewModel)
-    val savedSearchActions = rememberSavedSearchActions(viewModel)
     val labelsActions = rememberLabelsActions(viewModel, allSavedSearches)
     val connectivity = rememberLocalConnectivity()
     // The drawer is hosted at the window level (see App / LocalAppDrawer) so its scrim covers both
@@ -196,13 +193,10 @@ fun ArticleScreen(
     val appDrawer = LocalAppDrawer.current
     val drawerState = appDrawer?.state ?: rememberDrawerState(DrawerValue.Closed)
     val showOnboarding by viewModel.showOnboarding.collectAsState(false)
-    val markAllReadButtonPosition by appPreferences
-        .articleListOptions
-        .markReadButtonPosition
-        .collectChangesWithCurrent()
-    val badgeStyle by appPreferences.badgeStyle.collectChangesWithDefault()
 
-    val articles = viewModel.articles.collectAsLazyPagingItems()
+    val articleList by viewModel.articleList.collectAsStateWithLifecycle()
+    val presentedArticles = rememberPresentedArticles(articleList)
+    val articles = presentedArticles.items
     val searchResults = viewModel.searchResults.collectAsLazyPagingItems()
 
     val onMarkAllRead = { range: MarkRead ->
@@ -227,18 +221,17 @@ fun ArticleScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val confirmMarkAllReadEnabled by appPreferences.articleListOptions.confirmMarkAllRead.asState()
+    val markAllReadButtonPosition by appPreferences.articleListOptions.markReadButtonPosition.asState()
     var isMarkAllReadDialogOpen by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(
         LocalArticleActions provides articleActions,
         LocalFolderActions provides folderActions,
         LocalFeedActions provides feedActions,
-        LocalSavedSearchActions provides savedSearchActions,
         LocalLabelsActions provides labelsActions,
         LocalConnectivity provides connectivity,
         LocalLinkOpener provides provideLinkOpener(context),
         LocalMarkAllReadButtonPosition provides markAllReadButtonPosition,
-        LocalBadgeStyle provides badgeStyle,
         LocalUnreadCount provides unreadCount,
         LocalSnackbarHost provides snackbarHostState,
         LocalTimeFormats provides rememberDisplayTimeFormats(),
@@ -259,6 +252,7 @@ fun ArticleScreen(
         val scrollBehavior = pinnedScrollBehavior()
         val audioController: AudioPlayerController = koinInject()
         val audioEnclosure by audioController.currentAudio.collectAsState()
+        val audioPlayer by audioController.player.collectAsState()
         val focusManager = LocalFocusManager.current
         val openUpdatePasswordDialog = {
             viewModel.dismissUnauthorizedMessage()
@@ -297,18 +291,7 @@ fun ArticleScreen(
             lastReadArticleID = null
         }
 
-        // TEMP debug: list scroll restore after returning from the reader.
-        androidx.compose.runtime.LaunchedEffect(Unit) {
-            androidx.compose.runtime.snapshotFlow { articles.itemCount }
-                .collect { count ->
-                    android.util.Log.d(
-                        "ListScroll",
-                        "itemCount=$count firstVisible=${listState.firstVisibleItemIndex} offset=${listState.firstVisibleItemScrollOffset}"
-                    )
-                }
-        }
-
-        val resetScrollBehaviorOffset = resetScrollBehaviorListener(
+        ResetScrollBehaviorEffect(
             listState = listState,
             scrollBehavior = scrollBehavior
         )
@@ -316,7 +299,6 @@ fun ArticleScreen(
         val scrollToTop = {
             coroutineScope.launch {
                 listState.scrollToItem(0)
-                resetScrollBehaviorOffset()
             }
         }
 
@@ -326,9 +308,24 @@ fun ArticleScreen(
             listState = listState,
         )
 
+        val newArticles = rememberNewArticlesIndicator(
+            articles = presentedArticles,
+            listState = listState,
+            enabled = !viewModel.markReadOnScrollEnabled,
+        )
+
         val (scrolledFilter, setScrolledFilter) = rememberSaveable(
             saver = ArticleFilter.Saver
         ) { mutableStateOf(null) }
+
+        val presentedFilter = presentedArticles.filter
+
+        if (presentedFilter != scrolledFilter) {
+            SideEffect {
+                listState.requestScrollToItem(0)
+                setScrolledFilter(presentedFilter)
+            }
+        }
 
         LaunchedEffect(viewModel.refreshSkipReason) {
             val reason = viewModel.refreshSkipReason ?: return@LaunchedEffect
@@ -345,25 +342,19 @@ fun ArticleScreen(
 
         LaunchedEffect(filter, articles.loadState.refresh) {
             val refreshComplete = articles.loadState.refresh is LoadState.NotLoading
-            android.util.Log.d(
-                "ListScroll",
-                "reset-effect: complete=$refreshComplete equal=${filter == scrolledFilter} scrolledFilter=$scrolledFilter filter=$filter"
-            )
             if (refreshComplete && filter != scrolledFilter) {
-                android.util.Log.d("ListScroll", "reset-effect: scrolling to 0")
                 listState.scrollToItem(0)
-                resetScrollBehaviorOffset()
                 setScrolledFilter(filter)
             }
         }
 
-        MarkReadOnScroll(
+        MarkReadOnScrollEffect(
             listState = listState,
             articles = articles,
             scrollHighWaterMark = viewModel.scrollHighWaterMark,
             updateScrollHighWaterMark = viewModel::updateScrollHighWaterMark,
+            clampScrollHighWaterMark = viewModel::clampScrollHighWaterMark,
             markReadOnScroll = viewModel::markReadOnScroll,
-            resetScrollBehaviorOffset = resetScrollBehaviorOffset,
         )
 
         suspend fun openNextStatus(action: suspend () -> Unit) {
@@ -420,7 +411,6 @@ fun ArticleScreen(
         fun openNextList(action: suspend () -> Unit) {
             coroutineScope.launchUI {
                 drawerState.close()
-                delay(300)
                 openNextStatus(action)
             }
         }
@@ -465,6 +455,11 @@ fun ArticleScreen(
             }
         }
 
+        fun openDrawerSelection(action: suspend () -> Unit) {
+            onCloseArticle()
+            openNextList(action)
+        }
+
         val linkOpener = LocalLinkOpener.current
 
         fun selectArticle(article: Article) {
@@ -487,19 +482,23 @@ fun ArticleScreen(
 
         val selectFilter = {
             if (!filter.hasArticlesSelected()) {
-                openNextList { viewModel.selectArticleFilter() }
+                openDrawerSelection { viewModel.selectArticleFilter() }
             } else {
                 closeDrawer()
             }
         }
 
         val selectStatus = { status: ArticleStatus ->
-            viewModel.selectStatus(status)
+            if (status == filter.status) {
+                scrollToTop()
+            } else {
+                viewModel.selectStatus(status)
+            }
         }
 
         val selectFeed = { feed: Feed, folderTitle: String? ->
             if (!filter.isFeedSelected(feed)) {
-                openNextList { viewModel.selectFeed(feed.id, folderTitle) }
+                openDrawerSelection { viewModel.selectFeed(feed.id, folderTitle) }
             } else {
                 closeDrawer()
             }
@@ -507,7 +506,7 @@ fun ArticleScreen(
 
         val selectFolder = { folder: Folder ->
             if (!filter.isFolderSelected(folder)) {
-                openNextList { viewModel.selectFolder(folder.title) }
+                openDrawerSelection { viewModel.selectFolder(folder.title) }
             } else {
                 closeDrawer()
             }
@@ -515,7 +514,7 @@ fun ArticleScreen(
 
         val selectSavedSearch = { savedSearch: SavedSearch ->
             if (!filter.isSavedSearchSelected(savedSearch)) {
-                openNextList { viewModel.selectSavedSearch(savedSearch.id) }
+                openDrawerSelection { viewModel.selectSavedSearch(savedSearch.id) }
             } else {
                 closeDrawer()
             }
@@ -523,7 +522,7 @@ fun ArticleScreen(
 
         val selectToday = {
             if (!filter.hasTodaySelected()) {
-                openNextList { viewModel.selectToday() }
+                openDrawerSelection { viewModel.selectToday() }
             } else {
                 closeDrawer()
             }
@@ -551,7 +550,6 @@ fun ArticleScreen(
                     onNavigateToSettings = {
                         onNavigateToSettings()
                         coroutineScope.launchUI {
-                            delay(100)
                             drawerState.close()
                         }
                     },
@@ -564,7 +562,6 @@ fun ArticleScreen(
                     },
                     onFilterSelect = selectFilter,
                     onSelectToday = { selectToday() },
-                    onSelectStatus = { selectStatus(it) },
                     refreshState = refreshAllState,
                     onRefresh = {
                         refreshAll()
@@ -585,12 +582,12 @@ fun ArticleScreen(
 
         Box(modifier = Modifier.fillMaxSize()) {
                 val keyboardManager = LocalSoftwareKeyboardController.current
-                val markReadPosition = LocalMarkAllReadButtonPosition.current
 
                 CompositionLocalProvider(
                     LocalMarkAllRead provides { markAllRead(MarkRead.All) },
                 ) {
                     Scaffold(
+                        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.listPaneInsets(),
                         modifier = Modifier
                             .nestedScroll(scrollBehavior.nestedScrollConnection)
                             .nestedScroll(object : NestedScrollConnection {
@@ -639,23 +636,27 @@ fun ArticleScreen(
                                 modifier = Modifier.padding(bottom = 56.dp),
                             )
                         },
+                        floatingActionButtonPosition = FabPosition.Center,
                         floatingActionButton = {
-                            if (markReadPosition == MarkReadPosition.FLOATING_ACTION_BUTTON) {
-                                MarkAllReadButton(
-                                    position = MarkReadPosition.FLOATING_ACTION_BUTTON,
-                                )
-                            }
-                        },
-                        bottomBar = {
-                            audioEnclosure?.let { audio ->
-                                FloatingAudioPlayer(
-                                    audio = audio,
-                                    controller = audioController,
+                            val audio = audioEnclosure
+                            val player = audioPlayer
+                            if (audio != null && player != null) {
+                                AudioMiniPlayer(
+                                    player = player,
+                                    onClick = {
+                                        onSelectArticle(audio.articleID, null)
+                                    },
                                     onDismiss = {
                                         audioController.dismiss()
                                     },
                                 )
                             }
+                        },
+                        bottomBar = {
+                            ArticleStatusBottomBar(
+                                status = filter.status,
+                                onSelectStatus = { selectStatus(it) },
+                            )
                         }
                     ) { innerPadding ->
                         ArticleListScaffold(
@@ -692,10 +693,12 @@ fun ArticleScreen(
                                     } else {
                                         ArticleList(
                                             articles = articles,
+                                            contentPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding()),
                                             selectedArticleKey = selectedArticleID,
                                             listState = listState,
                                             enableMarkReadOnScroll = viewModel.markReadOnScrollEnabled,
-                                            dimReadArticles = filter.status != ArticleStatus.STARRED,
+                                            dimReadArticles = presentedArticles.filter.status != ArticleStatus.STARRED,
+                                            showNewArticles = newArticles.isVisible,
                                             scrollToTop = { scrollToTop() },
                                             onMarkAllRead = { range ->
                                                 onMarkAllRead(range)
@@ -868,11 +871,8 @@ fun rememberFeedActions(viewModel: ArticleScreenViewModel): FeedActions {
             updateOpenInBrowser = { feedID, openInBrowser ->
                 viewModel.updateOpenInBrowser(feedID, openInBrowser)
             },
-            removeFeed = { feedID ->
-                viewModel.removeFeed(feedID)
-            },
-            toggleUnreadBadge = { feedID, show ->
-                viewModel.toggleFeedUnreadBadge(feedID, show)
+            removeFeed = { feedID, completion ->
+                viewModel.removeFeed(feedID, completion)
             },
             reloadIcon = { feedID ->
                 viewModel.reloadFavicon(feedID)
@@ -907,17 +907,6 @@ fun rememberLabelsActions(
     }
 }
 
-@Composable
-fun rememberSavedSearchActions(viewModel: ArticleScreenViewModel): SavedSearchActions {
-    return remember {
-        SavedSearchActions(
-            toggleUnreadBadge = { id, show ->
-                viewModel.toggleSavedSearchUnreadBadge(id, show)
-            },
-        )
-    }
-}
-
 fun canOpenNextFeed(
     filter: ArticleFilter,
     range: MarkRead,
@@ -927,13 +916,13 @@ fun canOpenNextFeed(
 
 @OptIn(FlowPreview::class)
 @Composable
-private fun MarkReadOnScroll(
+private fun MarkReadOnScrollEffect(
     listState: LazyListState,
     articles: LazyPagingItems<Article>,
     scrollHighWaterMark: Int,
     updateScrollHighWaterMark: (Int) -> Unit,
+    clampScrollHighWaterMark: (Int) -> Unit,
     markReadOnScroll: (String) -> Unit,
-    resetScrollBehaviorOffset: () -> Unit,
 ) {
     val appPreferences = koinInject<AppPreferences>()
 
@@ -942,14 +931,22 @@ private fun MarkReadOnScroll(
         .markReadOnScroll
         .collectChangesWithCurrent()
 
+    val currentArticles by rememberUpdatedState(articles)
+    val currentHighWaterMark by rememberUpdatedState(scrollHighWaterMark)
+
     if (enabled) {
         LaunchedEffect(listState) {
             snapshotFlow { listState.layoutInfo.totalItemsCount }
                 .distinctUntilChanged()
                 .collect {
                     listState.scrollToItem(0)
-                    resetScrollBehaviorOffset()
                 }
+        }
+
+        LaunchedEffect(listState) {
+            snapshotFlow { currentArticles.itemCount }
+                .distinctUntilChanged()
+                .collect(clampScrollHighWaterMark)
         }
 
         LaunchedEffect(listState) {
@@ -962,13 +959,13 @@ private fun MarkReadOnScroll(
                     CapyLog.debug(
                         "mark_read_on_scroll:collect", mapOf(
                             "scrolledPastIndex" to scrolledPastIndex,
-                            "highWaterMark" to scrollHighWaterMark,
-                            "itemCount" to articles.itemCount,
+                            "highWaterMark" to currentHighWaterMark,
+                            "itemCount" to currentArticles.itemCount,
                         )
                     )
-                    if (scrolledPastIndex > scrollHighWaterMark && scrolledPastIndex < articles.itemCount) {
+                    if (scrolledPastIndex > currentHighWaterMark && scrolledPastIndex < currentArticles.itemCount) {
                         updateScrollHighWaterMark(scrolledPastIndex)
-                        val boundaryArticle = articles[scrolledPastIndex]
+                        val boundaryArticle = currentArticles[scrolledPastIndex]
                         if (boundaryArticle != null) {
                             CapyLog.debug(
                                 "mark_read_on_scroll:boundary", mapOf(

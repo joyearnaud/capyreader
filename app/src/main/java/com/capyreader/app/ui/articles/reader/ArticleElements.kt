@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,6 +54,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -197,7 +200,7 @@ fun ParagraphElement(
             linearText = linearText,
             idToIndex = idToIndex,
             actions = actions,
-            modifier = modifier,
+            modifier = modifier.semantics { heading() },
         )
     }
 }
@@ -328,8 +331,15 @@ fun ImageElement(
             ?: ImageAspectRatios[source.imgUri]
             ?: PLACEHOLDER_ASPECT_RATIO
 
+        val pageHeight = LocalReaderPageHeight.current
+
         val sizeModifier = if (failed) {
             Modifier.fillMaxWidth()
+        } else if (pageHeight != null) {
+            Modifier
+                .widthIn(max = pageHeight * aspectRatio)
+                .fillMaxWidth()
+                .aspectRatio(aspectRatio)
         } else {
             Modifier
                 .fillMaxWidth()
@@ -547,6 +557,7 @@ fun VideoElement(
     if (isPlaying && videoID != null) {
         YoutubePlayer(
             videoID = videoID,
+            onOpenLink = { url -> actions.onLinkClick(url, null) },
             modifier = frame,
         )
         return

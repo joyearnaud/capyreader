@@ -189,8 +189,6 @@
     <string name="article_list_sort_newest_first">Terbaru dahulu</string>
     <string name="article_list_sort_oldest_first">Tertua dahulu</string>
     <string name="article_list_row_swipe_toggle_starred">Beralih Favorit</string>
-    <string name="settings_gestures_reader_tap_to_page_subtitle">Ketuk sudut bawah untuk menavigasi konten artikel</string>
-    <string name="settings_gestures_reader_tap_to_page_title">E ink Ketuk untuk menggulir</string>
     <string name="settings_clear_all_articles_button">Hapus semua bacaan</string>
     <string name="article_actions_copy_link">Salin link</string>
     <string name="freshrss_article_actions_label">Label</string>
@@ -289,10 +287,6 @@
     <string name="settings_section_experimental">Eksperimental</string>
     <string name="settings_option_enable_audio_player">Pemutar audio</string>
     <string name="settings_option_show_today_filter">Hari ini</string>
-    <string name="mark_read_position_toolbar">Bilah Alat</string>
-    <string name="mark_read_position_floating_action_button">Tombol Tindakan Mengambang</string>
-    <string name="mark_all_read_button_position">Posisi Tombol Tandai Semua Dibaca</string>
-    <string name="settings_display_miscellaneous_title">Lain-lain</string>
     <string name="open_articles_in_browser">Buka Artikel di Browser</string>
     <string name="selected">Dipilih</string>
     <string name="auth_fields_freshrss_api_password">Kata Sandi API</string>
@@ -309,11 +303,6 @@
     <string name="audio_player_close">Tutup pemutar</string>
     <string name="audio_player_skip_back">Mundur 30 detik</string>
     <string name="audio_player_skip_forward">Maju 30 detik</string>
-    <string name="settings_panel_unread_counts_title">Lencana Belum Dibaca</string>
-    <string name="settings_option_badge_style">Gaya lencana</string>
-    <string name="badge_style_simple">Sederhana</string>
-    <string name="badge_style_exact">Tepat</string>
-    <string name="show_unread_badge">Tampilkan Lencana Belum Dibaca</string>
     <string name="article_actions_save_externally">Simpan</string>
     <string name="article_actions_save_externally_success">Tersimpan</string>
     <string name="article_actions_save_externally_failure">Gagal menyimpan</string>
@@ -345,4 +334,7 @@
     <string name="widget_spotlight_next">Berikutnya</string>
     <string name="freshrss_visibility">Visibilitas</string>
     <string name="freshrss_visibility_option_main">Aliran Utama</string>
+    <string name="mark_read_position_toolbar">Bilah Alat</string>
+    <string name="mark_read_position_floating_action_button">Tombol Tindakan Mengambang</string>
+    <string name="mark_all_read_button_position">Posisi Tombol Tandai Semua Dibaca</string>
 </resources>
