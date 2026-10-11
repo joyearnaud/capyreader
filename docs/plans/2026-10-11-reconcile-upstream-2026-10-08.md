@@ -43,3 +43,21 @@ Next: fix the harness on this reconcile line (`adb logcat -c` at start + PID fil
 `crash_check`; assert the expected screen before each tap, and abort instead of pressing on),
 re-run, re-read the screenshots, then step 5.
 
+
+---
+
+## Outcome — 2026-10-11, later the same evening: PROMOTED
+
+The red gate was not the end. Two real bugs were found and fixed on the scratch branch, then the
+scratch branch was fast-forwarded into `integration` (`bbac39ab`) and tagged `phone-2026-10-11`.
+
+| What was wrong | Fix |
+| --- | --- |
+| `crash_check` counted FATAL lines from the whole logcat buffer and cleared it only after a failure | match on the app's package, clear at run start and after every check |
+| Journeys inherited the previous journey's screen; journeys 5 and 6 walked into the reader | every journey resets with `goto_list`, and anchors replace the pixels the merge invalidated |
+| Journey 5 tapped the summary icon at 768,297 — the merge had moved it to 908,300 | `content-desc="Résumer cette liste"` |
+| The reader round-trip lost the list position: the restore scrolled a throwaway `LazyListState` and `MarkReadOnScrollEffect` reset to the top | key the effect on the list state, and `drop(1)` the re-emitted item count |
+
+Final suite: 1–6 green (`device-journeys/20261011-210136/`), screenshots read. Journey 5's badge
+delta stayed at 192 → 192 because the digest held nothing unread on this device; the journey reports
+that as a WARN, so the scoped mark-read path is exercised but its badge decrease is not proven yet.
