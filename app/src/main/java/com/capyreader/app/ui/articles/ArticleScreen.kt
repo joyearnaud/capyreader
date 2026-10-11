@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -106,6 +105,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -263,21 +263,28 @@ fun ArticleScreen(
         // Returning from the reader must land back where the tap happened.
         // nav3's saved-state restore is unreliable here (pager re-emits and
         // the saved index lags the real position), so track it ourselves.
-        LaunchedEffect(selectedArticleID) {
+        //
+        // Keyed on listState as well: while the reader is on top the list entry
+        // is disposed and LazyPagingItems hands out a throwaway LazyListState(0,0)
+        // (see LazyListStateExt). Scrolling that instance does nothing, and it
+        // would consume the saved position against a state nobody lays out, so
+        // the effect re-runs once the real instance arrives with the items.
+        LaunchedEffect(selectedArticleID, listState) {
             if (selectedArticleID != null) return@LaunchedEffect
-            // Wait for the pager to re-emit (itemCount drops to 0 while the
-            // list entry is disposed under the reader).
-            var waited = 0
-            while (articles.itemCount == 0 && waited < 40) {
-                withFrameNanos { }
-                waited++
-            }
+            if (articles.itemCount == 0) return@LaunchedEffect
             val readID = lastReadArticleID
             if (readID != null) {
                 val index = articles.itemSnapshotList.indexOfFirst { it?.id == readID }
                 if (index >= 0) {
                     // The read article stays in the list (greyed out) in the
                     // Unread view, so anchor on it directly.
+                    CapyLog.debug(
+                        "list_restore", mapOf(
+                            "how" to "read-id",
+                            "index" to index,
+                            "itemCount" to articles.itemCount,
+                        )
+                    )
                     listState.scrollToItem(index)
                     lastReadArticleID = null
                     lastListScrollPosition = null
@@ -285,6 +292,14 @@ fun ArticleScreen(
                 }
             }
             lastListScrollPosition?.let { (index, offset) ->
+                CapyLog.debug(
+                    "list_restore", mapOf(
+                        "how" to "saved-position",
+                        "index" to index,
+                        "offset" to offset,
+                        "itemCount" to articles.itemCount,
+                    )
+                )
                 lastListScrollPosition = null
                 listState.scrollToItem(index, offset)
             }
@@ -938,6 +953,13 @@ private fun MarkReadOnScrollEffect(
         LaunchedEffect(listState) {
             snapshotFlow { listState.layoutInfo.totalItemsCount }
                 .distinctUntilChanged()
+                // The first emission of a recreated list is not a content change.
+                // Returning from the reader tears the list down and re-emits the
+                // same count (a 0 -> N artefact of LazyPagingItems, see
+                // LazyListStateExt); resetting there threw away the scroll
+                // position the reader round-trip is supposed to restore. New
+                // content only ever appears as a change on a live list.
+                .drop(1)
                 .collect {
                     listState.scrollToItem(0)
                 }
