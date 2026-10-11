@@ -25,7 +25,9 @@ is nav3's stale saved index, hence "top of the list" in one run and "one row off
    attribute the landing position, and check `mark_read_on_scroll` in logcat: that effect calls
    `scrollToItem(0)` on every emission of `totalItemsCount` and would mask a fix.
 3. Build, install, run `scripts/journeys/run.sh 6` — twice, since the failure was 2/2 before.
-4. Remove the temporary logs, rebuild, then run the full suite (1–6) and read every screenshot.
+4. Strip the temporary instrumentation. One `CapyLog.debug("list_restore", …)` stays at the
+   decision point, following the `mark_read_on_scroll:collect` precedent in the same file; then
+   rebuild and run the full suite (1–6) and read every screenshot.
 5. Reviewer over the diff.
 6. Only then continue the reconcile plan: `git merge --ff-only` into `integration`, tag
    `phone-2026-10-11`, push, delete the scratch branch.

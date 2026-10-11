@@ -292,14 +292,6 @@ fun ArticleScreen(
                 }
             }
             lastListScrollPosition?.let { (index, offset) ->
-                CapyLog.debug(
-                    "list_restore", mapOf(
-                        "how" to "saved-position",
-                        "index" to index,
-                        "offset" to offset,
-                        "itemCount" to articles.itemCount,
-                    )
-                )
                 lastListScrollPosition = null
                 listState.scrollToItem(index, offset)
             }
