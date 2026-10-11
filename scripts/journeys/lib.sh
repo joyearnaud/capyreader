@@ -155,21 +155,57 @@ tap_text() {
   "$ADB" shell input tap "$(( (l + r) / 2 ))" "$(( (t + b) / 2 ))"
 }
 
-# Text of the node containing a screen point: lets a journey name what it is
-# about to open, then assert it comes back.
-text_at() {
-  local x="$1" y="$2" node bounds l t r b text
+# Centre y of the first node carrying an exact anchor (empty when it is absent).
+anchor_y() {
+  local anchor="$1" node bounds
+  dump_ui || return 1
+  node=$(printf '%s' "$LAST_DUMP" | tr '>' '\n' | grep -F "$anchor" | head -1)
+  [ -z "$node" ] && return 1
+  bounds=$(printf '%s' "$node" | grep -o 'bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | head -1)
+  [ -z "$bounds" ] && return 1
+  set -- $(printf '%s' "$bounds" | tr -cs '0-9' ' ')
+  printf '%s' "$(( ($2 + $4) / 2 ))"
+}
+
+# The topmost article title fully inside a vertical band — ie what a scrolled
+# list shows at the top of its viewport. Titles wrap to two lines or more, which
+# is what separates them from a source name or a timestamp.
+top_row_title() {
+  local ymin="$1" ymax="$2" node bounds t b text best="" besty=""
   dump_ui || return 1
   while IFS= read -r node; do
+    text=$(printf '%s' "$node" | grep -o 'text="[^"]\+"' | head -1 | sed 's/^text="//; s/"$//')
+    [ -z "$text" ] && continue
     bounds=$(printf '%s' "$node" | grep -o 'bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' | head -1)
     [ -z "$bounds" ] && continue
     set -- $(printf '%s' "$bounds" | tr -cs '0-9' ' ')
-    l=$1; t=$2; r=$3; b=$4
-    if [ "$x" -ge "$l" ] && [ "$x" -lt "$r" ] && [ "$y" -ge "$t" ] && [ "$y" -lt "$b" ]; then
-      text=$(printf '%s' "$node" | grep -o 'text="[^"]\+"' | head -1 | sed 's/^text="//; s/"$//')
-      [ -n "$text" ] && printf '%s' "$text" && return 0
-    fi
+    t=$2; b=$4
+    [ "$t" -ge "$ymin" ] || continue
+    [ "$b" -le "$ymax" ] || continue
+    [ "$(( b - t ))" -ge 100 ] || continue
+    if [ -z "$besty" ] || [ "$t" -lt "$besty" ]; then besty="$t"; best="$text"; fi
   done < <(printf '%s' "$LAST_DUMP" | tr '>' '\n')
+  [ -n "$best" ] && printf '%s' "$best"
+}
+
+# Wait for an anchor to appear, or to disappear. The digest sheet spends tens of
+# seconds on "Génération du résumé…", and a fixed pause either wastes time or
+# taps a sheet that is still empty.
+wait_anchor() {
+  local anchor="$1" timeout="$2" waited=0
+  while [ "$waited" -lt "$timeout" ]; do
+    dump_ui && [ "$(match_count "$anchor")" -gt 0 ] && return 0
+    sleep 3; waited=$((waited + 3))
+  done
+  return 1
+}
+
+wait_gone() {
+  local anchor="$1" timeout="$2" waited=0
+  while [ "$waited" -lt "$timeout" ]; do
+    dump_ui && [ "$(match_count "$anchor")" -eq 0 ] && return 0
+    sleep 5; waited=$((waited + 5))
+  done
   return 1
 }
 
@@ -181,10 +217,12 @@ goto_list() {
   for _ in $(seq 1 20); do foreground_ok && break; sleep 1; done
   abort_if_background
   pause 5
-  tap 81 297                     # drawer icon: no text anchor on Compose
+  # Anchored, not pixel: the summary icon used to be a tap at 768,297 and the
+  # upstream merge quietly moved it to 908,300 — the drawer icon and the rows
+  # carry content descriptions and labels, so they can be found wherever they sit.
+  tap_text "open drawer" 'content-desc="Open navigation drawer"'
   sleep 1.5
-  tap 295 490                    # "Non lus" row: the label is duplicated in the
-                                 # drawer (top-bar title + row), so no anchor tap
+  tap_text "unread row" 'text="Non lus"'
   sleep 1.5
   expect_screen "unread list" 'text="Non lus"'
 }
