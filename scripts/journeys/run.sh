@@ -43,6 +43,10 @@ fi
 "$ADB" shell svc power stayon true
 trap '"$ADB" shell svc power stayon false' EXIT
 
+# Start from an empty logcat buffer: stale system-app crashes from days before
+# the run are what made journey 1 fail falsely on 2026-10-11.
+logcat_reset
+
 # ---------------------------------------------------------------------------
 if want 1; then
   journey "1-launch"
@@ -63,6 +67,7 @@ fi
 # ---------------------------------------------------------------------------
 if want 2; then
   journey "2-article-native-reader"
+  goto_list
   tap 593 510                     # first list row
   pause 3
   shot "article"
@@ -74,10 +79,12 @@ fi
 # ---------------------------------------------------------------------------
 if want 3; then
   journey "3-digest-sheet"
+  goto_list
   tap 768 297                     # summary icon in the list top bar
   sleep 2
   shot "scope-dialog"
-  tap 878 1593                    # "Tout le contenu"
+  expect_screen "scope dialog" 'text="Tout le contenu"'
+  tap_text "scope: all content" 'text="Tout le contenu"'
   pause 6
   shot "sheet-loading-or-hit"
   # Wait until the sheet settles: on a DB hit it is instant, on a miss
@@ -105,10 +112,13 @@ fi
 # ---------------------------------------------------------------------------
 if want 4; then
   journey "4-summaries-history"
-  # Close any open digest sheet first: a tap outside it would be eaten.
-  swipe 445 1400 445 2600 250; sleep 1.5
+  # Start from the list: the previous journey leaves a digest sheet open, and a
+  # tap meant to dismiss it is eaten.
+  goto_list
   tap 81 297; sleep 2             # drawer
-  tap 295 825; pause 2          # "Résumés" row
+  expect_screen "drawer open" 'text="Résumés"'
+  tap_text "drawer: Résumés" 'text="Résumés"'
+  pause 2
   shot "summaries-list"
   tap 515 460; pause 2          # newest entry
   shot "history-detail"
@@ -124,36 +134,46 @@ fi
 # ---------------------------------------------------------------------------
 if want 5; then
   journey "5-mark-read-scoped"
-  # Close any open digest sheet first.
-  swipe 445 1400 445 2600 250; sleep 1.5
+  # Deterministic start. The old version began by swiping a sheet away and
+  # tapping the scrim at 1150,1500 to close the drawer — that tap opened an
+  # article instead, and the whole journey then ran inside the reader.
+  goto_list
   tap 81 297; sleep 2             # drawer
+  expect_screen "drawer open" 'text="Résumés"'
   refresh_dump
   before=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
   step "unread badge before: ${before:-unreadable}"
-  tap 1150 1500; sleep 1.5        # scrim closes the drawer (no back!)
-  tap 768 297; sleep 2            # summary icon
-  tap 878 1593; pause 6           # "Tout le contenu"
+  # Reset by relaunching rather than closing the drawer blind.
+  goto_list
+  tap 768 297; sleep 2            # summary icon in the list top bar
+  expect_screen "scope dialog" 'text="Tout le contenu"'
+  tap_text "scope: all content" 'text="Tout le contenu"'
+  pause 6
   # The mark-read button sits at the bottom of the sheet content.
   for _ in $(seq 1 6); do
     swipe 640 2100 640 400 120; sleep 0.3
   done
   shot "before-mark"
-  tap 904 2653                    # "Tout marquer comme lu"
+  tap_text "mark all read" 'text="Tout marquer comme lu"'
   sleep 1.5
   shot "confirm-dialog"
-  tap 844 1520                    # "Confirmer"
-  pause 2
+  tap_text "confirm" 'text="Confirmer"'
+  pause 3
+  goto_list
   tap 81 297; sleep 2             # drawer
+  expect_screen "drawer open" 'text="Résumés"'
   refresh_dump
   after=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
   step "unread badge after: ${after:-unreadable}"
   shot "after-mark"
-  if [ -n "$before" ] && [ -n "$after" ] && [ "$after" -lt "$before" ]; then
-    PASS=$((PASS + 1)); step "✅ PASS: unread badge decreased ($before → $after)"
-  elif [ -n "$before" ] && [ -n "$after" ] && [ "$after" = "$before" ]; then
-    step "⚠️ WARN: badge unchanged ($before) — digest likely contained no unread"
-  else
-    FAIL=$((FAIL + 1)); step "❌ FAIL: badge not readable ($before → $after)"
+  if [ "$SKIP" -eq 0 ]; then
+    if [ -n "$before" ] && [ -n "$after" ] && [ "$after" -lt "$before" ]; then
+      PASS=$((PASS + 1)); step "✅ PASS: unread badge decreased ($before → $after)"
+    elif [ -n "$before" ] && [ -n "$after" ] && [ "$after" = "$before" ]; then
+      step "⚠️ WARN: badge unchanged ($before) — digest likely contained no unread"
+    else
+      FAIL=$((FAIL + 1)); step "❌ FAIL: badge not readable ($before → $after)"
+    fi
   fi
   crash_check
   summary
@@ -162,23 +182,39 @@ fi
 # ---------------------------------------------------------------------------
 if want 6; then
   journey "6-list-scroll-restore"
-  # Scroll deep, open the article at the top of the viewport, come back:
-  # the list must land back on that same article.
+  goto_list
+  # Scroll deep, open the article at the top of the viewport, come back: the
+  # list must land back on that same row. The old version asserted nothing at
+  # all, so a journey that never restored the position still reported PASS.
   for i in $(seq 1 10); do
     swipe 640 2100 640 700 200
     sleep 0.35
   done
   pause 2
   shot "list-deep"
+  opened=$(text_at 568 1250)
+  step "row opened at 568,1250: ${opened:-unreadable}"
+  if [ -z "$opened" ]; then fail_journey "no row label at 568,1250 after scrolling"; fi
   tap 568 1250
   pause 3
   shot "article"
   back
   pause 3
   shot "list-restored"
+  if [ "$SKIP" -eq 0 ]; then
+    restored=$(text_at 568 1250)
+    step "row at 568,1250 after back: ${restored:-unreadable}"
+    if [ -n "$restored" ] && [ "$restored" = "$opened" ]; then
+      PASS=$((PASS + 1)); step "✅ PASS: scroll position restored ($opened)"
+    else
+      FAIL=$((FAIL + 1)); step "❌ FAIL: scroll position lost ($opened → ${restored:-unreadable})"
+    fi
+  fi
   crash_check
   summary
 fi
 
 echo "Done. Artifacts: $ART_DIR" >&2
-echo "PASS=$PASS FAIL=$FAIL (crash + badge checks; screenshots are the content validation)" >&2
+echo "PASS=$PASS FAIL=$FAIL (crash + screen assertions; screenshots are the content validation)" >&2
+[ "$FAIL" -gt 0 ] && exit 1
+exit 0
