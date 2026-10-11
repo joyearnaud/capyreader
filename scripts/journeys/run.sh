@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Device journey runner for the CapyReader fork (debug build).
 #
-# Drives the installed app through 5 user journeys over adb and takes a
-# screenshot at every checkpoint. Screenshots are the validation artifact;
-# the only automated PASS/FAIL signals are app crashes (logcat) and the
-# unread-badge delta in journey 5 — uiautomator dumps proved unreliable on
-# Compose windows, so they are not used for assertions.
+# Drives the installed app through 6 user journeys over adb and takes a
+# screenshot at every checkpoint, then asserts each journey landed on the screen
+# it expected (text anchors read from the uiautomator dump). Screenshots are
+# still the validation artifact: a PASS only means the expected anchors were on
+# screen and the app did not crash.
 #
 # Usage:  scripts/journeys/run.sh [journey-number ...]
-# Journeys: 1 launch · 2 article · 3 digest-sheet · 4 summaries · 5 mark-read
+# Journeys: 1 launch · 2 article · 3 digest-sheet · 4 summaries · 5 mark-read ·
+#           6 list-scroll-restore
 # Requirements: one device connected, unlocked, with CapyReader in the
 # foreground (the runner refuses to send any input otherwise, and re-checks
 # before every action).
@@ -57,8 +58,11 @@ if want 1; then
   abort_if_background
   sleep 4
   # Deterministic start: global Unread status (always populated).
-  tap 81 297; sleep 1.5
-  tap 295 490; sleep 1.5          # "Non lus" in the drawer
+  tap_text "open drawer" 'content-desc="Open navigation drawer"'
+  sleep 1.5
+  tap_text "unread row" 'text="Non lus"'
+  sleep 1.5
+  expect_screen "unread list" 'text="Non lus"'
   shot "list"
   crash_check
   summary
@@ -218,8 +222,10 @@ if want 6; then
       # the top of the viewport, so the row's exact y is not the contract. What
       # must hold is that the tapped row is on screen again: before this fix the
       # list returned to the top of the list and the row was absent from the dump.
-      if [ -n "$y_after" ]; then
-        PASS=$((PASS + 1)); step "✅ PASS: tapped row back on screen (y $y_before → $y_after)"
+      if [ -n "$y_after" ] && [ "$y_after" -le 900 ]; then
+        PASS=$((PASS + 1)); step "✅ PASS: tapped row back on screen (y $y_before → $y_after, upper band)"
+      elif [ -n "$y_after" ]; then
+        FAIL=$((FAIL + 1)); step "❌ FAIL: tapped row back but not at the top (y $y_before → $y_after)"
       else
         FAIL=$((FAIL + 1)); step "❌ FAIL: tapped row not on screen after back ($title)"
       fi

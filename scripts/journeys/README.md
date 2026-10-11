@@ -8,7 +8,7 @@ report. Re-run after every upstream sync or feature change to validate.
 ## Usage
 
 ```sh
-scripts/journeys/run.sh            # all 5 journeys
+scripts/journeys/run.sh            # all 6 journeys
 scripts/journeys/run.sh 1 3        # subset
 ```
 
@@ -43,9 +43,12 @@ the journey — never a coin flip, and there is no silent pixel fallback to hide
 Anchors are still a form of calibration: they are the app's own labels, so a renamed string means a
 recalibration, not a regression.
 
-Icon-only controls (the drawer hamburger, the summary icon) keep pixel taps. Every pixel tap is
-followed by an `expect_screen` assertion so a wrong screen surfaces immediately instead of cascading
-into the next journey.
+Icon-only controls are anchored by `content-desc` (`Open navigation drawer`, `Résumer cette
+liste`) wherever the dump carries one. A few taps stay pixels on purpose — the first article row in
+journey 2, the summary reference and the newest history entry in journeys 3 and 4 — because their
+target has no stable label. Each of those is followed by an `expect_screen` assertion, so a wrong
+screen surfaces immediately instead of cascading into the next journey; check the screenshot
+before trusting such a step.
 
 Fallback coordinates live inline in `run.sh`.
 
