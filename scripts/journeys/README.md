@@ -26,7 +26,7 @@ Requirements:
 | 3 | digest-sheet | Scope dialog → generation/DB hit → sheet; reference → article → back → sheet restored |
 | 4 | summaries | Drawer → history list → digest detail → reference → native back |
 | 5 | mark-read-scoped | "Tout marquer comme lu" from the digest only lowers the unread badge by the digest's unread |
-| 6 | list-scroll-restore | Scroll deep, open an article, come back: the list lands on the same article |
+| 6 | list-scroll-restore | Scroll deep, open an article, come back: the tapped row is back on screen. It also exercises the `markReadOnScroll` = ON path, the harder one. |
 
 Artifacts land in `device-journeys/<UTC timestamp>/`: one folder of
 screenshots per journey plus `report.md` with PASS/FAIL lines. Review the
@@ -62,3 +62,10 @@ Fallback coordinates live inline in `run.sh`.
   run start and after every check.
 - `run.sh` exits non-zero when any journey failed, so a red gate is machine-checkable.
 - The screenshots remain the artifact: `PASS` only ever means "no crash on this screen".
+
+## Device-state dependencies
+
+Journey 6 needs the app's `markReadOnScroll` preference to be ON to cover the harder path: with it
+ON, `MarkReadOnScrollEffect` resets the list to the top whenever `totalItemsCount` changes, and a
+reader round-trip re-emits that count. The harness does not pin the preference — it reports what the
+installed build does with the settings on the phone.

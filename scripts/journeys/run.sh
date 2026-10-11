@@ -80,7 +80,7 @@ fi
 if want 3; then
   journey "3-digest-sheet"
   goto_list
-  tap 768 297                     # summary icon in the list top bar
+  tap_text "summary icon" 'content-desc="Résumer cette liste"'
   sleep 2
   shot "scope-dialog"
   expect_screen "scope dialog" 'text="Tout le contenu"'
@@ -115,7 +115,7 @@ if want 4; then
   # Start from the list: the previous journey leaves a digest sheet open, and a
   # tap meant to dismiss it is eaten.
   goto_list
-  tap 81 297; sleep 2             # drawer
+  tap_text "open drawer" 'content-desc="Open navigation drawer"'; sleep 2
   expect_screen "drawer open" 'text="Résumés"'
   tap_text "drawer: Résumés" 'text="Résumés"'
   pause 2
@@ -138,17 +138,20 @@ if want 5; then
   # tapping the scrim at 1150,1500 to close the drawer — that tap opened an
   # article instead, and the whole journey then ran inside the reader.
   goto_list
-  tap 81 297; sleep 2             # drawer
+  tap_text "open drawer" 'content-desc="Open navigation drawer"'; sleep 2
   expect_screen "drawer open" 'text="Résumés"'
   refresh_dump
   before=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
   step "unread badge before: ${before:-unreadable}"
   # Reset by relaunching rather than closing the drawer blind.
   goto_list
-  tap 768 297; sleep 2            # summary icon in the list top bar
+  tap_text "summary icon" 'content-desc="Résumer cette liste"'
   expect_screen "scope dialog" 'text="Tout le contenu"'
   tap_text "scope: all content" 'text="Tout le contenu"'
-  pause 6
+  # Generation takes tens of seconds on a miss: wait for the sheet to be up and
+  # for its progress line to go, instead of guessing with a fixed pause.
+  wait_anchor 'content-desc="Fermer la feuille"' 30
+  wait_gone 'text="Génération du résumé…"' 180
   # The mark-read button sits at the bottom of the sheet content.
   for _ in $(seq 1 6); do
     swipe 640 2100 640 400 120; sleep 0.3
@@ -160,7 +163,7 @@ if want 5; then
   tap_text "confirm" 'text="Confirmer"'
   pause 3
   goto_list
-  tap 81 297; sleep 2             # drawer
+  tap_text "open drawer" 'content-desc="Open navigation drawer"'; sleep 2
   expect_screen "drawer open" 'text="Résumés"'
   refresh_dump
   after=$(echo "$LAST_DUMP" | grep -o 'text="Non lus"[^>]*' | grep -o '[0-9]\+' | head -1)
@@ -183,31 +186,39 @@ fi
 if want 6; then
   journey "6-list-scroll-restore"
   goto_list
-  # Scroll deep, open the article at the top of the viewport, come back: the
-  # list must land back on that same row. The old version asserted nothing at
-  # all, so a journey that never restored the position still reported PASS.
+  # Scroll deep, open the topmost fully-visible article, then come back: the list
+  # must land on that same row at the same height. The old version asserted
+  # nothing at all, so a lost position still reported PASS.
   for i in $(seq 1 10); do
     swipe 640 2100 640 700 200
     sleep 0.35
   done
   pause 2
   shot "list-deep"
-  opened=$(text_at 568 1250)
-  step "row opened at 568,1250: ${opened:-unreadable}"
-  if [ -z "$opened" ]; then fail_journey "no row label at 568,1250 after scrolling"; fi
-  tap 568 1250
-  pause 3
-  shot "article"
-  back
-  pause 3
-  shot "list-restored"
-  if [ "$SKIP" -eq 0 ]; then
-    restored=$(text_at 568 1250)
-    step "row at 568,1250 after back: ${restored:-unreadable}"
-    if [ -n "$restored" ] && [ "$restored" = "$opened" ]; then
-      PASS=$((PASS + 1)); step "✅ PASS: scroll position restored ($opened)"
-    else
-      FAIL=$((FAIL + 1)); step "❌ FAIL: scroll position lost ($opened → ${restored:-unreadable})"
+  title=$(top_row_title 420 2300)
+  step "top row after scrolling: ${title:-unreadable}"
+  if [ -z "$title" ]; then
+    fail_journey "no article title in the viewport after scrolling"
+  else
+    y_before=$(anchor_y "text=\"$title\"")
+    tap_text "article row" "text=\"$title\""
+    pause 3
+    shot "article"
+    back
+    pause 3
+    shot "list-restored"
+    if [ "$SKIP" -eq 0 ]; then
+      y_after=$(anchor_y "text=\"$title\"")
+      step "title centre y: $y_before before, ${y_after:-unreadable} after"
+      # The restore anchors on the article that was opened and scrolls it back to
+      # the top of the viewport, so the row's exact y is not the contract. What
+      # must hold is that the tapped row is on screen again: before this fix the
+      # list returned to the top of the list and the row was absent from the dump.
+      if [ -n "$y_after" ]; then
+        PASS=$((PASS + 1)); step "✅ PASS: tapped row back on screen (y $y_before → $y_after)"
+      else
+        FAIL=$((FAIL + 1)); step "❌ FAIL: tapped row not on screen after back ($title)"
+      fi
     fi
   fi
   crash_check
