@@ -152,9 +152,13 @@ if want 5; then
   # for its progress line to go, instead of guessing with a fixed pause.
   wait_anchor 'content-desc="Fermer la feuille"' 30
   wait_gone 'text="Génération du résumé…"' 180
-  # The mark-read button sits at the bottom of the sheet content.
-  for _ in $(seq 1 6); do
-    swipe 640 2100 640 400 120; sleep 0.3
+  # The mark-read button sits at the bottom of the sheet content, and how far
+  # that is depends on how much the digest rendered. Scroll until the anchor is
+  # actually on screen rather than guessing a fixed number of swipes.
+  for _ in $(seq 1 12); do
+    dump_ui && [ "$(match_count 'text="Tout marquer comme lu"')" -gt 0 ] && break
+    swipe 640 2100 640 400 200
+    sleep 0.4
   done
   shot "before-mark"
   tap_text "mark all read" 'text="Tout marquer comme lu"'
