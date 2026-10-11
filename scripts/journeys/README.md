@@ -35,7 +35,30 @@ the signal that something regressed.
 
 ## Calibration
 
-Taps are calibrated for a 1280×2856 Pixel-class phone. When a text anchor
-is found in the UI dump, the runner taps the node's bounds instead — so
-most steps survive moderate layout shifts. Fallback coordinates live
-inline in `run.sh`.
+Taps are calibrated for a 1280×2856 Pixel-class phone. **Prefer an anchor over a pixel**:
+`tap_text <label> <anchor>` finds the node carrying an exact attribute match (`text="Résumés"`)
+in the UI dump and taps its centre. Anchors survive the layout shifts that come with every upstream
+merge, where hardcoded pixels do not. An anchor that matches zero nodes, or more than one, fails
+the journey — never a coin flip, and there is no silent pixel fallback to hide a moved screen.
+Anchors are still a form of calibration: they are the app's own labels, so a renamed string means a
+recalibration, not a regression.
+
+Icon-only controls (the drawer hamburger, the summary icon) keep pixel taps. Every pixel tap is
+followed by an `expect_screen` assertion so a wrong screen surfaces immediately instead of cascading
+into the next journey.
+
+Fallback coordinates live inline in `run.sh`.
+
+## Failure policy
+
+- Every journey resets to a known screen first (`goto_list` = force-stop, relaunch, global Unread
+  list). Journeys no longer inherit the state the previous one left behind.
+- A failed assertion marks that journey FAILED and suppresses its later input; the run **continues**
+  with the next journey, which resets its own state. One bad screen no longer hides the other five.
+- A dump that comes back empty is reported as a *dump failure*, distinct from a missing anchor — a
+  flaky dump must not read as a layout regression.
+- `crash_check` reads only FATAL lines naming `com.capyreader.app.debug` (matching on the package,
+  not the PID, so a crash followed by a restart is still caught) and clears the logcat buffer at
+  run start and after every check.
+- `run.sh` exits non-zero when any journey failed, so a red gate is machine-checkable.
+- The screenshots remain the artifact: `PASS` only ever means "no crash on this screen".
